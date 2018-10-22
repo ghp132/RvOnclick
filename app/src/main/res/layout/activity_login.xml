@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".LoginActivity">
+
+    <EditText
+        android:id="@+id/tv_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="http://192.168.1.105:8084" />
+
+    <EditText
+        android:id="@+id/tv_loginEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="hari.enterprises14@gmail.com" />
+
+    <EditText
+        android:id="@+id/tv_loginPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPassword"
+        android:text="incorrect@14" />
+
+    <Button
+        android:id="@+id/bt_login"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Login" />
+
+    <Button
+        android:id="@+id/bt_getData"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Get Data" />
+
+    <Button
+        android:id="@+id/bt_nextActivity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Next Activity" />
+
+    <TextView
+        android:id="@+id/tv_responseDisplay"
+        android:layout_width="match_parent"
+        android:layout_height="141dp" />
+</LinearLayout>
