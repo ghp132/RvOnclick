@@ -38,7 +38,7 @@ public class TabFragment2 extends Fragment {
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
 
-        orderList = stDatabase.stDao().getAllOrder();
+         orderList = stDatabase.stDao().getAllOrder();
         textView=view.findViewById(R.id.tv_fragment2);
         for (int i = 0; i<orderList.size(); i++){
             Long orderId = orderList.get(i).getOrderId();
