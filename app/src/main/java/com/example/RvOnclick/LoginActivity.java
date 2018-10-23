@@ -2,9 +2,8 @@ package com.example.RvOnclick;
 
 import android.arch.persistence.room.Room;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -25,14 +24,12 @@ import org.json.JSONObject;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.net.HttpCookie;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
     EditText tvLoginEmail, tvLoginPassword, tvUrl;
-    Button btLogin, btGetData, btNextActivity;
+    Button btLogin, btGetData, btNextActivity, btPostSampleData;
     String loginEmail, loginPassword, loginUrl, siteUrl;
     public static StDatabase stDatabase;
 
@@ -47,6 +44,7 @@ public class LoginActivity extends AppCompatActivity {
         btLogin = (Button) findViewById(R.id.bt_login);
         btGetData = findViewById(R.id.bt_getData);
         btNextActivity = findViewById(R.id.bt_nextActivity);
+        btPostSampleData = findViewById(R.id.bt_postSampleData);
         tvUrl = findViewById(R.id.tv_url);
         stDatabase = Room.databaseBuilder(getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
@@ -64,7 +62,7 @@ public class LoginActivity extends AppCompatActivity {
                 loginUrl = tvUrl.getText().toString();
 
                 String url = loginUrl + "/api/method/login";
-            RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+                RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
                 StringRequest stringRequest = new StringRequest(
                         Request.Method.POST, url,
                         new Response.Listener<String>() {
@@ -95,6 +93,76 @@ public class LoginActivity extends AppCompatActivity {
                 requestQueue.add(stringRequest);
 
 
+            }
+        });
+
+        btPostSampleData.setOnClickListener(new View.OnClickListener() {
+            private JSONObject getParams() {
+                JSONArray jsonArray = new JSONArray();
+                JSONObject jsonObj = new JSONObject();
+                try {
+                    jsonObj.put("item_code", "FL Jelley Tray");
+                    jsonObj.put("qty", 1);
+                    jsonObj.put("stock_uom", "Nos");
+                    jsonObj.put("warehouse", "Stores - HC");
+                    jsonObj.put("item_name", "FL Jelley Tray");
+                    jsonObj.put("rate", "100");
+                    jsonObj.put("amount", 100);
+                    jsonObj.put("base_rate", "100");
+                    jsonObj.put("delivery_date", "2018-11-30");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                jsonArray.put(jsonObj);
+                JSONObject params = new JSONObject();
+                try {
+                    params.put("selling_price_list", "Standard Selling");
+                    params.put("posting_date", "2018-10-22");
+                    params.put("due_date", "2018-11-30");
+                    params.put("order_type", "Sales");
+                    params.put("delivery_date", "2018-11-30");
+                    params.put("customer", "5 Star Agencies");
+                    params.put("items", jsonArray);
+                    params.put("is_pos", 0);
+                    params.put("conversion_rate", 1);
+                    params.put("customer_name", "Swathi Stores");
+                    params.put("commission_rate", 0);
+                    params.put("company", "Hari Company");
+                    params.put("paid_amount", 0);
+                    params.put("remarks", "No Remarks");
+                    params.put("plc_conversion_rate", 1);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                return params;
+            }
+
+            @Override
+            public void onClick(View v) {
+                String url = loginUrl + "/api/resource/Sales Order/";
+                RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                        url, getParams(),
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                siteUrl = loginUrl;
+                                Toast.makeText(getApplicationContext(),
+                                        "Logged in" + response, Toast.LENGTH_SHORT).show();
+
+                            }
+                        }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                        Toast.makeText(getApplicationContext(), "That didn't work.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+                ) {
+
+                };
+                requestQueue.add(jsonObjectRequest);
             }
         });
 
@@ -203,8 +271,6 @@ public class LoginActivity extends AppCompatActivity {
                 LoginActivity.this.startActivity(intent);
             }
         });
-
-
 
 
     }

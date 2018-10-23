@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="http://192.168.1.105:8084" />
+        android:text="https://haricompany2.erpnext.com" />
 
     <EditText
         android:id="@+id/tv_loginEmail"
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="hari.enterprises14@gmail.com" />
+        android:text="ghari132@gmail.com" />
 
     <EditText
         android:id="@+id/tv_loginPassword"
@@ -48,6 +48,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Next Activity" />
+
+    <Button
+        android:id="@+id/bt_postSampleData"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Post Sample Data" />
 
     <TextView
         android:id="@+id/tv_responseDisplay"
