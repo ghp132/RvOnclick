@@ -8,9 +8,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.math.RoundingMode;
 import java.util.List;
 
-public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdViewHolder> {
+public class OrderProductAdapter extends RecyclerView.Adapter<OrderProductAdapter.ProdViewHolder> {
 
     public interface OnItemClickListener {
         void onItemClicked(View view, int position);
@@ -18,20 +19,31 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
 
     private OnItemClickListener listener;
     private Context context;
-    private List<Product> productList;
+    private List<OrderProduct> productList;
+
 
     @NonNull
     @Override
-    public ProductAdapter.ProdViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    public OrderProductAdapter.ProdViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View itemView = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.rv_item_product,viewGroup,false);
         return new ProdViewHolder(itemView);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ProductAdapter.ProdViewHolder prodViewHolder, int i) {
-        Product product = productList.get(i);
-        prodViewHolder.tvProductName.setText(product.getProductName());
-        prodViewHolder.tvAdded.setText(String.format("%.0f",product.getProductRate()));
+    public void onBindViewHolder(@NonNull OrderProductAdapter.ProdViewHolder prodViewHolder, int i) {
+        OrderProduct product = productList.get(i);
+        String prodCode = product.getProductCode();
+        double qty = product.getQty();
+        String qtyStr = String.format("%.2f", qty);
+        double rate = product.getRate();
+        String rateStr = String.format("%.2f",rate);
+        Long prodTotal = Math.round(rate*qty);
+        String prodTotalStr = String.valueOf(prodTotal);
+
+        prodViewHolder.tvProductName.setText(product.getProductCode());
+        prodViewHolder.tvCount.setText("Qty: " + qtyStr);
+        prodViewHolder.tvOrder.setText("Rate: "+ rateStr);
+        prodViewHolder.tvAdded.setText("Total: " + prodTotalStr);
 
 
     }
@@ -63,10 +75,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
         }
     }
 
-    public ProductAdapter (OnItemClickListener listener, List<Product>productList, Context context){
+    public OrderProductAdapter (OnItemClickListener listener, List<OrderProduct>productList, Context context){
         this.productList = productList;
         this.listener = listener;
         this.context = context;
     }
 
 }
+

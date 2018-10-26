@@ -11,8 +11,17 @@ public class OrderProduct{
     private int orderProductId;
     private int orderId;
     private String productCode;
-    private long qty;
+    private double qty;
     private String companyId;
+    private double rate;
+
+    public double getRate() {
+        return rate;
+    }
+
+    public void setRate(double rate) {
+        this.rate = rate;
+    }
 
     @NonNull
     public int getOrderProductId() {
@@ -39,11 +48,11 @@ public class OrderProduct{
         this.productCode = productCode;
     }
 
-    public long getQty() {
+    public double getQty() {
         return qty;
     }
 
-    public void setQty(long qty) {
+    public void setQty(double qty) {
         this.qty = qty;
     }
 

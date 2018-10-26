@@ -47,7 +47,7 @@ public class TabFragment2 extends Fragment {
             orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
             for (int c = 0; c<orderProductList.size(); c++){
                 String prodCode = orderProductList.get(c).getProductCode();
-                Long qty = orderProductList.get(c).getQty();
+                double qty = orderProductList.get(c).getQty();
                 ordersList = ordersList + "\n" + prodCode + " : "+ qty;
             }
 

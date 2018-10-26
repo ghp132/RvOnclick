@@ -18,6 +18,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -27,20 +29,11 @@ import java.util.List;
 public class CustomerTransactionProductFragment extends Fragment implements ProductAdapter.OnItemClickListener {
 
 
-    private TextView mTextView;
-    private RecyclerView mRecyclerview;
     public static StDatabase stDatabase;
     protected String custCode;
-    //private DialogFragment_ProductRateInfo.OnProductSelectedListener mListener;
     public int orderId;
-
-
     public List<Product> productList;
-
-
     private ProductAdapter.OnItemClickListener listener;
-    //public CustomerAdapter customerAdapter = new CustomerAdapter(listener,customerList, getActivity());
-
 
     public CustomerTransactionProductFragment() {
         // Required empty public constructor
@@ -55,13 +48,28 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
 
         custCode = getArguments().getString("custCode");
-        orderId = -1;
+        orderId = -1; //order id to be set -1 for the first item of the order => order created only
+                        //after the first item is selected
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
-
-
         productList = stDatabase.stDao().getProduct();
+        Collections.sort(productList, new Comparator<Product>() {
+            @Override
+            public int compare(Product o1, Product o2) {
+                return o1.getProductName().compareToIgnoreCase(o2.getProductName());
+            }
+        });
+
+        List<Product> filtered = new ArrayList<>();
+        for (Product product : productList){
+            if(product.getProductBrand().contains("MTR") ){
+                filtered.add(product);
+            }
+        }
+
+        productList = filtered;
+
 
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
 
@@ -79,7 +87,11 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        //get the order id from the dialogfragment
         orderId = Integer.parseInt(data.getStringExtra("orderId"));
+        //CustomerTransactionOrderFragment orderFragment = (CustomerTransactionOrderFragment) getFragmentManager()
+                //.findFragmentById(1).setUserVisibleHint(true);
+        getActivity().getIntent().putExtra("orderId", String.valueOf(orderId));
     }
 
 
@@ -88,12 +100,16 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
 
         String prodCode = productList.get(position).getProductCode();
+        double rate = productList.get(position).getProductRate();
         //Toast.makeText(getActivity(), custCode, Toast.LENGTH_SHORT).show();
 
         Bundle args = new Bundle();
         args.putString("prodCode", prodCode);
         args.putString("custCode", custCode);
         args.putString("orderId", String.valueOf(orderId));
+        args.putDouble("rate",rate);
+
+
 
 
         DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();

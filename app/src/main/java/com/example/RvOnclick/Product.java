@@ -16,7 +16,7 @@ public class Product {
     private String productBrand;
     private Boolean productDisabled;
     private String productGroup;
-    private long productRate;
+    private double productRate;
 
     @NonNull
     public String getProductCode() {
@@ -59,11 +59,11 @@ public class Product {
         this.productGroup = productGroup;
     }
 
-    public long getProductRate() {
+    public double getProductRate() {
         return productRate;
     }
 
-    public void setProductRate(long productRate) {
+    public void setProductRate(double productRate) {
         this.productRate = productRate;
     }
 }

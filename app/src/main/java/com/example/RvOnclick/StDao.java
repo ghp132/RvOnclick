@@ -3,6 +3,7 @@ package com.example.RvOnclick;
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.Query;
+import android.arch.persistence.room.Update;
 
 import java.util.List;
 
@@ -34,6 +35,9 @@ public interface StDao {
 
     @Query("select * from Customer where customer_disabled = 0")
     public List<Customer> getCustomer();
+
+    @Query("update OrderProduct set qty = :qty, rate = :rate where orderProductId = :id")
+    public int updateOrderProductById(double qty, double rate, int id);
 
 
 }

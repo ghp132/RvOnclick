@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPassword"
-        android:text="incorrect@14" />
+        android:text="ghp" />
 
     <Button
         android:id="@+id/bt_login"

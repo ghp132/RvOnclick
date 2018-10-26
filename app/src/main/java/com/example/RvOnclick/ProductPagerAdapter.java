@@ -24,7 +24,10 @@ public class ProductPagerAdapter extends FragmentStatePagerAdapter {
                 return fragment;
 
             case 1:
-                return new CustomerTransactionOrderFragment();
+                Fragment fragment1 = new CustomerTransactionOrderFragment();
+
+                fragment1.setArguments(bundle);
+                return fragment1;
             case 2:
                 return new CustomerTransactionHistoryFragment();
             default:

@@ -187,6 +187,7 @@ public class LoginActivity extends AppCompatActivity {
                                         Boolean disabledB = Boolean.parseBoolean(disabled);
                                         String product_code = item.getString("item_code");
                                         String product_group = item.getString("item_group");
+                                        String product_rate = item.getString("standard_rate");
 
                                         Product product = new Product();
                                         product.setProductCode(product_code);
@@ -194,6 +195,7 @@ public class LoginActivity extends AppCompatActivity {
                                         product.setProductBrand(brand);
                                         product.setProductDisabled(disabledB);
                                         product.setProductGroup(product_group);
+                                        product.setProductRate(Double.parseDouble(product_rate));
 
                                         stDatabase.stDao().addProduct(product);
                                     }

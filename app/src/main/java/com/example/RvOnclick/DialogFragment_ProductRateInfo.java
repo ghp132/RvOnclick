@@ -15,14 +15,16 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.util.List;
+
 
 /**
  * A simple {@link Fragment} subclass.
  */
 public class DialogFragment_ProductRateInfo extends DialogFragment {
     TextView tv;
-    Button btProductSave, btIncrease, btDecrease;
-    EditText etQty;
+    Button btProductSave, btIncrease, btDecrease, btCancel;
+    EditText etQty, etRate;
     public static StDatabase stDatabase;
     public String custCode;
     public long orderId;
@@ -59,6 +61,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         custCode = getArguments().getString("custCode");
 
 
+
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__product_rate_info, container, false);
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
@@ -67,21 +70,27 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
 
         btProductSave = view.findViewById(R.id.bt_productSave);
+        btCancel = view.findViewById(R.id.bt_cancel);
         btIncrease = view.findViewById(R.id.bt_increase);
         btDecrease = view.findViewById(R.id.bt_decrease);
         etQty = view.findViewById(R.id.et_qty);
+        etRate = view.findViewById(R.id.et_rate);
+
+        etRate.setText(String.valueOf(getArguments().getDouble("rate")));
 
 
         btProductSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Long qty = Long.parseLong(etQty.getText().toString());
+                Double qty = Double.parseDouble(etQty.getText().toString());
+                Double rate = Double.parseDouble((etRate.getText().toString()));
                 CreateNewOrderIfNotExists(orderId);
-                AddProductToOrder(orderId,prodCode,qty);
+                AddProductToOrder(orderId,prodCode,qty,rate);
 
                 //passing data to the CustomerTransactionProductFragment
                 Intent intent = new Intent();
                 intent.putExtra("orderId",String.valueOf(orderId));
+
                 getTargetFragment().onActivityResult(getTargetRequestCode(),1,intent);
 
 
@@ -109,6 +118,13 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
             }
         });
 
+        btCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getDialog().dismiss();
+            }
+        });
+
         tv = (TextView) view.findViewById(R.id.tv1);
         String sampleText = prodCode + getArguments().get("custCode") + getArguments().getString("orderId");
         tv.setText(sampleText);
@@ -130,12 +146,27 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
     }
 
-    public void AddProductToOrder(long orderId, String prodCode, Long qty){
+    public void AddProductToOrder(long orderId, String prodCode, double qty, double rate){
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.setOrderId((int) orderId);
         orderProduct.setProductCode(prodCode);
         orderProduct.setQty(qty);
-        stDatabase.stDao().addProductToOrder(orderProduct);
+        orderProduct.setRate(rate);
+        Boolean notPresent = true;
+        //check to see if the product is already present in the order
+        List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
+        for (OrderProduct op : orderProductList){
+            if (op.getProductCode().equals(prodCode)){
+                qty = op.getQty()+qty;
+                int orderProductId = op.getOrderProductId();
+                stDatabase.stDao().updateOrderProductById(qty, rate, orderProductId);
+                notPresent = false;
+                break;
+            }
+        }
+        if (notPresent) {
+            stDatabase.stDao().addProductToOrder(orderProduct);
+        }
     }
 
 

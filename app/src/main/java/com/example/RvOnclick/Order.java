@@ -12,6 +12,7 @@ public class Order {
     private String customerCode;
     private boolean orderStatus;
 
+
     @NonNull
     public Long getOrderId() {
         return orderId;
