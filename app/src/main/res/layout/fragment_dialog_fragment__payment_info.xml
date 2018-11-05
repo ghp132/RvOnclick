@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/rl_paymentInfo"
+    tools:context=".DialogFragment_PaymentInfo">
+
+    <!-- TODO: Update blank fragment layout -->
+
+    <EditText
+        android:id="@+id/et_paymentAmt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:ems="10"
+        android:inputType="numberDecimal" />
+
+    <CheckBox
+        android:id="@+id/cb_cheque"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="54dp"
+        android:checked="false"
+        android:text="Cheque" />
+
+    <EditText
+        android:id="@+id/et_chequeNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/cb_cheque"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="4dp"
+        android:ems="10"
+        android:hint="Cheque Number"
+        android:inputType="number"
+        android:visibility="gone" />
+
+    <EditText
+        android:id="@+id/et_chequeDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/et_chequeNumber"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="4dp"
+        android:layout_marginTop="4dp"
+        android:ems="10"
+        android:hint="Date"
+        android:inputType="date"
+        android:visibility="gone" />
+
+    <EditText
+        android:id="@+id/et_bank"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/et_chequeDate"
+        android:layout_alignStart="@+id/et_paymentAmt"
+        android:layout_marginTop="4dp"
+        android:ems="10"
+        android:hint="Bank"
+        android:inputType="textPersonName"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/bt_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/et_bank"
+        android:layout_alignStart="@+id/et_paymentAmt"
+        android:layout_marginStart="-1dp"
+        android:layout_marginTop="5dp"
+        android:text="Cancel" />
+
+    <Button
+        android:id="@+id/bt_paymentSave"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/bt_cancel"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="5dp"
+        android:text="Save" />
+
+    <TextView
+        android:id="@+id/tv_paymentErrorInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="289dp"
+        android:text="TextView"
+        android:visibility="gone" />
+
+</RelativeLayout>

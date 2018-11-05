@@ -1,102 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/constrainLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context=".DialogFragment_ProductRateInfo"
-    android:layout_alignParentBottom="false">
+    android:layout_alignParentBottom="false"
+    tools:context=".DialogFragment_ProductRateInfo">
 
     <!-- TODO: Update blank fragment layout -->
     <TextView
         android:id="@+id/tv1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
         android:layout_marginStart="0dp"
         android:layout_marginTop="0dp"
-        android:text="@string/hello_blank_fragment"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="@string/hello_blank_fragment" />
 
     <Button
         android:id="@+id/bt_productSave"
-        android:layout_width="109dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/et_rate"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="9dp"
         android:layout_marginEnd="8dp"
-        android:text="Save"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/et_rate" />
+        android:text="Save" />
 
     <EditText
         android:id="@+id/et_qty"
-        android:layout_width="0dp"
+        android:layout_width="272dp"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/tv1"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="10dp"
+        android:layout_toStartOf="@+id/bt_increase"
+        android:layout_toEndOf="@+id/bt_decrease"
         android:ems="10"
         android:inputType="number|numberDecimal"
-        android:text="1"
-        app:layout_constraintEnd_toStartOf="@+id/bt_increase"
-        app:layout_constraintStart_toEndOf="@+id/bt_decrease"
-        app:layout_constraintTop_toBottomOf="@+id/tv1" />
+        android:text="1" />
 
     <Button
         android:id="@+id/bt_decrease"
         android:layout_width="39dp"
         android:layout_height="44dp"
+        android:layout_below="@+id/tv1"
+        android:layout_alignParentStart="true"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="4dp"
-        android:text="-"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv1" />
+        android:layout_marginTop="8dp"
+        android:text="-" />
 
     <Button
         android:id="@+id/bt_increase"
         android:layout_width="39dp"
         android:layout_height="44dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="8dp"
+        android:layout_below="@+id/tv1"
+        android:layout_alignParentEnd="true"
 
-        android:text="+"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv1" />
+        android:layout_marginTop="9dp"
+        android:layout_marginEnd="8dp"
+        android:text="+" />
 
     <Button
         android:id="@+id/bt_cancel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/et_rate"
+        android:layout_alignParentStart="true"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:layout_marginEnd="8dp"
-        android:text="Cancel"
-        app:layout_constraintEnd_toStartOf="@+id/bt_productSave"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/et_rate" />
+        android:text="Cancel" />
 
     <TextView
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/bt_decrease"
+        android:layout_alignBaseline="@+id/et_rate"
+        android:layout_alignParentStart="true"
         android:layout_marginStart="8dp"
-        android:text="Rate"
-        app:layout_constraintBaseline_toBaselineOf="@+id/et_rate"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:layout_marginTop="23dp"
+        android:text="Rate" />
 
     <EditText
         android:id="@+id/et_rate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_below="@+id/et_qty"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="42dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="90dp"
+        android:layout_toEndOf="@+id/textView2"
         android:ems="10"
-        android:inputType="number|numberDecimal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/textView2"
-        app:layout_constraintTop_toBottomOf="@+id/et_qty" />
+        android:inputType="number|numberDecimal" />
 
-</android.support.constraint.ConstraintLayout>
+</RelativeLayout>

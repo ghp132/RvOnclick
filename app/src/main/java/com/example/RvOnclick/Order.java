@@ -10,8 +10,38 @@ public class Order {
     @NonNull
     private Long orderId;
     private String customerCode;
-    private boolean orderStatus;
+    private int orderStatus;
+    //order statuses
+    // -1 sync unattempted
+    // 0 sync attempted - result unknown
+    // 1 draft
+    // 2 submitted
+    private String appOrderId;
+    private String orderNumber;
 
+    public String getOrderNumber() {
+        return orderNumber;
+    }
+
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    public String getAppOrderId() {
+        return appOrderId;
+    }
+
+    public void setAppOrderId(String appOrderId) {
+        this.appOrderId = appOrderId;
+    }
+
+    public int getOrderStatus() {
+        return orderStatus;
+    }
+
+    public void setOrderStatus(int orderStatus) {
+        this.orderStatus = orderStatus;
+    }
 
     @NonNull
     public Long getOrderId() {
@@ -30,13 +60,7 @@ public class Order {
         this.customerCode = customerCode;
     }
 
-    public boolean isOrderStatus() {
-        return orderStatus;
-    }
 
-    public void setOrderStatus(boolean orderStatus) {
-        this.orderStatus = orderStatus;
-    }
 }
 
 

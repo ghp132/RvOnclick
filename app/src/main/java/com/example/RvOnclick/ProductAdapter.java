@@ -31,7 +31,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
     public void onBindViewHolder(@NonNull ProductAdapter.ProdViewHolder prodViewHolder, int i) {
         Product product = productList.get(i);
         prodViewHolder.tvProductName.setText(product.getProductName());
-        prodViewHolder.tvAdded.setText(String.format("%.0f",product.getProductRate()));
+        prodViewHolder.tvAdded.setText(Double.toString(product.getProductRate()));
 
 
     }

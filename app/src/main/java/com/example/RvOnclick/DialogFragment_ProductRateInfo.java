@@ -8,13 +8,17 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 
@@ -77,6 +81,8 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         etRate = view.findViewById(R.id.et_rate);
 
         etRate.setText(String.valueOf(getArguments().getDouble("rate")));
+        Double qty = getArguments().getDouble("qty");
+        etQty.setText(Double.toString(qty));
 
 
         btProductSave.setOnClickListener(new View.OnClickListener() {
@@ -101,9 +107,9 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         btIncrease.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int qty = Integer.parseInt(etQty.getText().toString());
+                Double qty = Double.parseDouble(etQty.getText().toString());
                 qty = qty+1 ;
-                etQty.setText(String.valueOf(qty));
+                etQty.setText(Double.toString(qty));
 
             }
         });
@@ -111,9 +117,9 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         btDecrease.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int qty = Integer.parseInt(etQty.getText().toString());
+                Double qty = Double.parseDouble(etQty.getText().toString());
                 if (qty>=1){qty=qty-1;}
-                etQty.setText(String.valueOf(qty));
+                etQty.setText(Double.toString(qty));
 
             }
         });
@@ -137,9 +143,14 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         if (orderId == -1){
             Order order = new Order();
             order.setCustomerCode(custCode);
-            order.setOrderStatus(false);
+            order.setOrderStatus(-1);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyymmddhhmmss");
+            String ts = simpleDateFormat.format(new Date());
+            order.setAppOrderId(ts+orderId);
 
             this.orderId = stDatabase.stDao().createOrder(order);
+            String appOrderId = ts+this.orderId;
+            stDatabase.stDao().updateAppOrderId(appOrderId,this.orderId);
 
         }
 
@@ -157,7 +168,6 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
         for (OrderProduct op : orderProductList){
             if (op.getProductCode().equals(prodCode)){
-                qty = op.getQty()+qty;
                 int orderProductId = op.getOrderProductId();
                 stDatabase.stDao().updateOrderProductById(qty, rate, orderProductId);
                 notPresent = false;

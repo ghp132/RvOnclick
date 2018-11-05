@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="https://haricompany2.erpnext.com" />
+        android:text="http://192.168.1.105:8084" />
 
     <EditText
         android:id="@+id/tv_loginEmail"
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="ghari132@gmail.com" />
+        android:text="hari.enterprises14@gmail.com" />
 
     <EditText
         android:id="@+id/tv_loginPassword"
@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPassword"
-        android:text="ghp" />
+        android:text="incorrect@14" />
 
     <Button
         android:id="@+id/bt_login"
@@ -49,14 +49,41 @@
         android:layout_height="wrap_content"
         android:text="Next Activity" />
 
-    <Button
-        android:id="@+id/bt_postSampleData"
+    <LinearLayout
+        android:id="@+id/ll_postAndDelete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Post Sample Data" />
+        android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tv_responseDisplay"
+        <Button
+            android:id="@+id/bt_postSampleData"
+            android:layout_width="174dp"
+            android:layout_height="wrap_content"
+            android:text="Post Sample Data" />
+
+        <Button
+            android:id="@+id/bt_deleteOrders"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="deleteOrders"
+            android:text="Delete Orders" />
+    </LinearLayout>
+
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="141dp" />
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_responseDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </LinearLayout>
+    </ScrollView>
+
 </LinearLayout>

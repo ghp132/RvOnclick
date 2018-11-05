@@ -102,12 +102,17 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
 
 
         String prodCode = productList.get(position).getProductCode();
+        Double qty = productList.get(position).getQty();
+        Double rate = productList.get(position).getRate();
 
         // data passed to product rate info dialog fragment
         Bundle args = new Bundle();
         args.putString("prodCode", prodCode);
         args.putString("custCode", custCode);
         args.putString("orderId", String.valueOf(orderId));
+        args.putDouble("qty",qty);
+        args.putDouble("rate",rate);
+
 
 
 

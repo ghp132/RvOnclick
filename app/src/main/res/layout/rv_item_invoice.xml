@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rl_rvli"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/row_padding_vertical"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingBottom="@dimen/row_padding_vertical">
+
+    <TextView
+        android:id="@+id/tvInvoiceNumber"
+        android:layout_width="272dp"
+        android:layout_height="32dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/productName"
+        android:textSize="16dp"
+        android:textStyle="bold" />
+
+    <RelativeLayout
+        android:id="@+id/rl_inv_info"
+        android:layout_width="380dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tvInvoiceNumber"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="0dp">
+
+        <TextView
+            android:id="@+id/tvGrandTotal"
+            android:layout_width="122dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="0dp" />
+
+        <TextView
+            android:id="@+id/tvPaid"
+            android:layout_width="128dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="0dp"
+            android:text="TextView" />
+
+        <TextView
+            android:id="@+id/tvOutstanding"
+            android:layout_width="126dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="0dp"
+            android:layout_toEndOf="@+id/tvGrandTotal"
+            android:text="TextView" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/tv_invoiceDate"
+        android:layout_width="96dp"
+        android:layout_height="33dp"
+        android:layout_alignTop="@+id/tvInvoiceNumber"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="0dp"
+        android:layout_toEndOf="@+id/tvInvoiceNumber" />
+
+
+</RelativeLayout>

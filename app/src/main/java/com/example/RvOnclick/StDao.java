@@ -21,6 +21,12 @@ public interface StDao {
     @Insert
     public void addProductToOrder(OrderProduct orderProduct);
 
+    @Insert
+    public Long createInvoice (Invoice invoice);
+
+    @Insert
+    public void makePayment (Payment payment);
+
     @Query("select * from `Order`")
     public List<Order> getAllOrder();
 
@@ -38,6 +44,22 @@ public interface StDao {
 
     @Query("update OrderProduct set qty = :qty, rate = :rate where orderProductId = :id")
     public int updateOrderProductById(double qty, double rate, int id);
+
+    @Query("select * from Invoice where customer = :custCode")
+    public List<Invoice> getInvoicesByCustomerCode(String custCode);
+
+    @Query("update 'Order' set appOrderId = :appOrderId where orderId = :id")
+    public void updateAppOrderId(String appOrderId, Long id);
+
+
+    @Query("select * from `Order` where orderStatus=-1")
+    public List<Order> getUnsyncedOrders();
+
+    @Query("delete from 'Order' where 1")
+    public void deleteAllOrders();
+
+    @Query("delete from orderproduct where 1")
+    public void deleteAllOrderProducts();
 
 
 }

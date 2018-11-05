@@ -1,14 +1,18 @@
 package com.example.RvOnclick;
 
+import android.app.Activity;
 import android.arch.persistence.room.Room;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -24,7 +28,9 @@ import org.json.JSONObject;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
@@ -95,77 +101,85 @@ public class LoginActivity extends AppCompatActivity {
 
             }
         });
-
+        final Context ctx = this;
         btPostSampleData.setOnClickListener(new View.OnClickListener() {
-            private JSONObject getParams() {
-                JSONArray jsonArray = new JSONArray();
-                JSONObject jsonObj = new JSONObject();
-                try {
-                    jsonObj.put("item_code", "FL Jelley Tray");
-                    jsonObj.put("qty", 1);
-                    jsonObj.put("stock_uom", "Nos");
-                    jsonObj.put("warehouse", "Stores - HC");
-                    jsonObj.put("item_name", "FL Jelley Tray");
-                    jsonObj.put("rate", "100");
-                    jsonObj.put("amount", 100);
-                    jsonObj.put("base_rate", "100");
-                    jsonObj.put("delivery_date", "2018-11-30");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                jsonArray.put(jsonObj);
-                JSONObject params = new JSONObject();
-                try {
-                    params.put("selling_price_list", "Standard Selling");
-                    params.put("posting_date", "2018-10-22");
-                    params.put("due_date", "2018-11-30");
-                    params.put("order_type", "Sales");
-                    params.put("delivery_date", "2018-11-30");
-                    params.put("customer", "5 Star Agencies");
-                    params.put("items", jsonArray);
-                    params.put("is_pos", 0);
-                    params.put("conversion_rate", 1);
-                    params.put("customer_name", "Swathi Stores");
-                    params.put("commission_rate", 0);
-                    params.put("company", "Hari Company");
-                    params.put("paid_amount", 0);
-                    params.put("remarks", "No Remarks");
-                    params.put("plc_conversion_rate", 1);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                return params;
-            }
+            TextView textView = findViewById(R.id.tv_responseDisplay);
 
             @Override
             public void onClick(View v) {
-                String url = loginUrl + "/api/resource/Sales Order/";
-                RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
-                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                        url, getParams(),
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                siteUrl = loginUrl;
-                                Toast.makeText(getApplicationContext(),
-                                        "Logged in" + response, Toast.LENGTH_SHORT).show();
 
-                            }
-                        }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        error.printStackTrace();
-                        Toast.makeText(getApplicationContext(), "That didn't work.", Toast.LENGTH_SHORT).show();
+                JSONObject params = new JSONObject();
+
+                String info = "";
+                List<Order> unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
+                int responseCounter = 0;
+                for (Order order : unsycedOrderList) {
+                    responseCounter = responseCounter + 1;
+                    info = info + "\n\n";
+                    String appOrderId = order.getAppOrderId();
+                    Long orderId = order.getOrderId();
+                    info = info + orderId;
+                    String custCode = order.getCustomerCode();
+                    info = info + "\n" + custCode;
+                    Calendar calendar = Calendar.getInstance();
+                    String deliveryDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + (calendar.get(Calendar.DAY_OF_MONTH));
+                    info = info + "\n" + deliveryDate;
+                    textView.setText(info);
+                    RequestQueue queue = MySingleton.getInstance(getApplicationContext()).getRequestQueue();
+
+                    List<OrderProduct> unsyncedOrderProduct = stDatabase.stDao().getOrderProductsById(orderId);
+                    JSONArray jsonArray = new JSONArray();
+                    for (OrderProduct orderProduct : unsyncedOrderProduct) {
+                        JSONObject jsonObject = new JSONObject();
+                        String itemCode = orderProduct.getProductCode();
+                        Double qty = orderProduct.getQty();
+                        Double rate = orderProduct.getRate();
+                        try {
+                            jsonObject.put("item_code", itemCode);
+                            jsonObject.put("qty", qty);
+                            jsonObject.put("rate", rate);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        jsonArray.put(jsonObject);
                     }
-                }
-                ) {
+                    try {
+                        params.put("delivery_date", deliveryDate);
+                        params.put("customer", custCode);
+                        params.put("items", jsonArray);
+                        params.put("app_order_id", appOrderId);
 
-                };
-                requestQueue.add(jsonObjectRequest);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    info = info + "\n" + params.toString();
+                    textView.setText(info);
+
+                    String url = loginUrl + "/api/resource/Sales%20Order/";
+                    RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+                    JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
+                            url, params,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    siteUrl = loginUrl;
+                                    Toast.makeText(getApplicationContext(),
+                                            "Logged in" + response, Toast.LENGTH_SHORT).show();
+                                }
+                            }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            error.printStackTrace();
+                            Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    );
+                    jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
+                            , 0, 3000));
+                    MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
+                }
             }
         });
-
         btGetData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -214,7 +228,6 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 );
                 requesQueue.add(jsonObjectRequest);
-
                 //---------------------------------------------------------------------------------------
 
                 url = siteUrl + "/api/resource/Customer?fields=[\"*\"]&limit_page_length=1000";
@@ -262,6 +275,57 @@ public class LoginActivity extends AppCompatActivity {
                 );
                 requesQueue.add(jsonObjectRequest);
 
+                //---------------------------------------------------------------------------------------------------------
+                //getting invoice data - start
+                url = siteUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"customer\",\"grand_total\",\"company\",\"outstanding_amount\",\"docstatus\",\"posting_date\"]&limit_page_length=2000";
+                requesQueue = Volley.newRequestQueue(LoginActivity.this);
+                jsonObjectRequest = new JsonObjectRequest(
+                        Request.Method.GET, url, null,
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONArray json = response.getJSONArray("data");
+
+                                    for (int i = 0; i < json.length(); i++) {
+                                        JSONObject invoice = (JSONObject) json.get(i);
+                                        String customer_code = invoice.getString("customer");
+                                        Double grand_total = Double.parseDouble(invoice.getString("grand_total"));
+                                        String invoice_no = invoice.getString("name");
+                                        String company = invoice.getString("company");
+                                        Double outstanding_amount = Double.parseDouble(invoice.getString("outstanding_amount"));
+                                        Boolean invoice_status = Boolean.parseBoolean(invoice.getString("docstatus"));
+                                        String invoice_date = invoice.getString("posting_date");
+
+                                        Invoice dbInvoice = new Invoice();
+                                        dbInvoice.setInvoiceNumber(invoice_no);
+                                        dbInvoice.setCustomer(customer_code);
+                                        dbInvoice.setCompany(company);
+                                        dbInvoice.setGrandTotal(grand_total);
+                                        dbInvoice.setInvoiceStatus(invoice_status);
+                                        dbInvoice.setOutstanding(outstanding_amount);
+                                        dbInvoice.setInvoiceDate(invoice_date);
+                                        dbInvoice.setPaidAmount(0.00);
+
+                                        stDatabase.stDao().createInvoice(dbInvoice);
+                                    }
+                                    Toast.makeText(getApplicationContext(), "Invoice Done", Toast.LENGTH_SHORT).show();
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                    Toast.makeText(getApplicationContext(), "Invoice not Done", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                        Toast.makeText(getApplicationContext(), "Error in receiving Invoice JSON", Toast.LENGTH_SHORT).show();
+                    }
+                }
+                );
+                requesQueue.add(jsonObjectRequest);
+
+                //----------------------------------------------------------------------------------------------------------
 
             }
         });
@@ -275,5 +339,12 @@ public class LoginActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    public void deleteOrders(View view) {
+        stDatabase.stDao().deleteAllOrderProducts();
+        stDatabase.stDao().deleteAllOrders();
+        TextView textView = findViewById(R.id.tv_responseDisplay);
+        textView.setText("");
     }
 }
