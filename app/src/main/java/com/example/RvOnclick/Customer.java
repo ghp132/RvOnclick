@@ -15,6 +15,24 @@ public class Customer {
     private String territory;
     private String customer_group;
     private Boolean customer_disabled;
+    private String display_name;
+    private String price_list;
+
+    public String getPrice_list() {
+        return price_list;
+    }
+
+    public void setPrice_list(String price_list) {
+        this.price_list = price_list;
+    }
+
+    public String getDisplay_name() {
+        return display_name;
+    }
+
+    public void setDisplay_name(String display_name) {
+        this.display_name = display_name;
+    }
 
     @NonNull
     public String getCustomer_id() {

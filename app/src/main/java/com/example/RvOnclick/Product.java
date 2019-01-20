@@ -14,9 +14,20 @@ public class Product {
     @ColumnInfo
     private String productName;
     private String productBrand;
+
+    public String getProductCompany() {
+        return productCompany;
+    }
+
+    public void setProductCompany(String productCompany) {
+        this.productCompany = productCompany;
+    }
+
+    private String productCompany;
     private Boolean productDisabled;
     private String productGroup;
     private double productRate;
+    private double stock;
 
     @NonNull
     public String getProductCode() {
@@ -65,5 +76,14 @@ public class Product {
 
     public void setProductRate(double productRate) {
         this.productRate = productRate;
+    }
+
+
+    public double getStock() {
+        return stock;
+    }
+
+    public void setStock(double stock) {
+        this.stock = stock;
     }
 }

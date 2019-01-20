@@ -13,6 +13,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.List;
 
@@ -25,26 +27,20 @@ import static android.content.ContentValues.TAG;
 public class CustomerTransactionOrderFragment extends Fragment implements OrderProductAdapter.OnItemClickListener {
 
     public static StDatabase stDatabase;
-    protected String custCode;
     public Long orderId;
+    public double orderTotalValue;
     public List<OrderProduct> productList;
+    protected String custCode;
+    RecyclerView recyclerView;
     private OrderProductAdapter.OnItemClickListener listener;
-
-
-
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser){
-        super.setUserVisibleHint(isVisibleToUser);
-        if (isVisibleToUser){
-            getFragmentManager().beginTransaction().detach(this).attach(this).commit();
-        }
-    }
+    TextView tvOrderInfo;
 
 
 
     public CustomerTransactionOrderFragment() {
         // Required empty public constructor
     }
+
 
 
     @Override
@@ -55,14 +51,18 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
 
         custCode = getArguments().getString("custCode");
         Log.d("TransactionActivity", "onCreateView: ");
-
+        tvOrderInfo=view.findViewById(R.id.tv_customerOrderInfo);
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
+        orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
+        tvOrderInfo.setText(String.valueOf(orderTotalValue));
 
         try{
             try{
+
                 orderId = Long.parseLong(getActivity().getIntent().getStringExtra("orderId"));
+                //Toast.makeText(getActivity().getApplicationContext(),orderId.toString(),Toast.LENGTH_SHORT).show();
             } catch (NumberFormatException ee){
                 orderId = Long.parseLong(String.valueOf(-1));
             }
@@ -70,16 +70,16 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
         catch (NullPointerException e){
 
             int temp = -1;
+            //Toast.makeText(getActivity().getApplicationContext(),orderId.toString(),Toast.LENGTH_SHORT).show();
             orderId = Long.parseLong(String.valueOf(-1));
         }
 
 
 
         if (orderId != -1 && orderId != null){
-
+            orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
             productList = stDatabase.stDao().getOrderProductsById(orderId);
-
-            RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.OrderProduct_recyclerview);
+            recyclerView = (RecyclerView) view.findViewById(R.id.OrderProduct_recyclerview);
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
             listener = this;
             OrderProductAdapter productAdapter = new OrderProductAdapter(listener, productList, getActivity());
@@ -92,8 +92,12 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        //get the order id from the dialogfragment
-        //orderId = Integer.parseInt(data.getStringExtra("orderId"));
+        productList = stDatabase.stDao().getOrderProductsById(orderId);
+        OrderProductAdapter productAdapter = new OrderProductAdapter(listener, productList, getActivity());
+        recyclerView.setAdapter(productAdapter);
+        orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
+        tvOrderInfo.setText(String.valueOf(orderTotalValue));
+
     }
 
 
@@ -119,14 +123,17 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
         DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();
         df.setArguments(args);
         df.setCancelable(false);
-        df.setTargetFragment(this, 1);
-
+        df.setTargetFragment(this, 2);
 
         df.show(getFragmentManager(), "Dialog");
         setUserVisibleHint(false);
     }
 
-
-
-
-}
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser){
+        super.setUserVisibleHint(isVisibleToUser);
+        if (isVisibleToUser){
+            getFragmentManager().beginTransaction().detach(this).attach(this).commit();
+        }
+    }
+    }

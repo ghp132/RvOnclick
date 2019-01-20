@@ -10,10 +10,14 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,8 +36,10 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
     public static StDatabase stDatabase;
     protected String custCode;
     public int orderId;
-    public List<Product> productList;
+    public List<Product> productList,searchableProductList;
     private ProductAdapter.OnItemClickListener listener;
+    EditText productSearchBox;
+    public static String TAG = "CustomerTransactionFragment";
 
     public CustomerTransactionProductFragment() {
         // Required empty public constructor
@@ -45,53 +51,119 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_customer_transaction_product, container, false);
+        ApplicationController ac = new ApplicationController();
 
-
+        //Toast.makeText(getActivity().getApplicationContext(),getActivity().getIntent().getStringExtra("orderId"),Toast.LENGTH_SHORT).show();
         custCode = getArguments().getString("custCode");
-        orderId = -1; //order id to be set -1 for the first item of the order => order created only
-                        //after the first item is selected
+        if (getArguments().getString("orderId")!=null) {
+            orderId = Integer.parseInt(getArguments().getString("orderId"));
+        } else if(getActivity().getIntent().getStringExtra("orderId")!=null) {
+            orderId = Integer.parseInt(getActivity().getIntent().getStringExtra("orderId"));
+        } else {
+            orderId = -1; //order id to be set -1 for the first item of the order => order is created only
+            //after the first item is selected
+
+        }
+        productSearchBox = view.findViewById(R.id.et_productSearch);
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
-        productList = stDatabase.stDao().getProduct();
-        Collections.sort(productList, new Comparator<Product>() {
-            @Override
-            public int compare(Product o1, Product o2) {
-                return o1.getProductName().compareToIgnoreCase(o2.getProductName());
-            }
-        });
+        productList = stDatabase.stDao().getEnabledProducts(false);
+        //updating prices based on the default price list
+        Customer customer = stDatabase.stDao().getCustomerbyCustomerCode(custCode);
+        String priceList = customer.getPrice_list();
+        //ac.makeShortToast(getActivity(),"went through this " + priceList);
 
-        List<Product> filtered = new ArrayList<>();
-        for (Product product : productList){
-            if(product.getProductBrand().contains("MTR") ){
-                filtered.add(product);
+        List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
+        if (priceList!=null) {
+
+            for (Price p : prices){
+               // Log.d(TAG, "price:" + p.getProductCode() + "|" + p.getPrice());
+                String prodCodeFromPrices = p.getProductCode();
+                for (Product product : productList){
+                    String prodCode = product.getProductCode();
+                    Log.d(TAG, "onCreateView: prodCode");
+                    if (prodCodeFromPrices.equals(prodCode)) {
+                        int indexOfProduct = productList.indexOf(product);
+                        product.setProductRate(p.getPrice());
+                        //check later
+                        stDatabase.stDao().updateProduct(product);
+                        productList.set(indexOfProduct, product);
+                        Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
+                    }
+                }
             }
         }
 
-        productList = filtered;
 
 
-        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
+        final RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
+        productList = sortProductList(productList);
+
 
         listener = this;
-        ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
+        final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
         recyclerView.setAdapter(productAdapter);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
+        productAdapter.notifyDataSetChanged();
+
+
+
+
+
+        productSearchBox.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                //auto-generated - I'm assuming this is needed
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // fires up when there is any change in the search text box
+                List<Product> filtered = new ArrayList<>();
+                searchableProductList = stDatabase.stDao().getProduct();
+                for (Product product : searchableProductList){
+                    String searchString = product.getProductName().toLowerCase();
+                    if(searchString.contains(productSearchBox.getText().toString().toLowerCase()) ){
+                        filtered.add(product);
+                    }
+                }
+
+                productList = sortProductList(filtered);
+                final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
+                recyclerView.setAdapter(productAdapter);
+                productAdapter.notifyDataSetChanged();
+
+
+
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                //auto-generated - I'm assuming this is needed
+
+            }
+        });
 
         return view;
     }
+
+
+
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         //get the order id from the dialogfragment
         orderId = Integer.parseInt(data.getStringExtra("orderId"));
-        //CustomerTransactionOrderFragment orderFragment = (CustomerTransactionOrderFragment) getFragmentManager()
-                //.findFragmentById(1).setUserVisibleHint(true);
         getActivity().getIntent().putExtra("orderId", String.valueOf(orderId));
+        productSearchBox.selectAll();
     }
 
 
@@ -101,7 +173,6 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
         String prodCode = productList.get(position).getProductCode();
         double rate = productList.get(position).getProductRate();
-        //Toast.makeText(getActivity(), custCode, Toast.LENGTH_SHORT).show();
 
         Bundle args = new Bundle();
         args.putString("prodCode", prodCode);
@@ -122,21 +193,22 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
     }
 
+    private List<Product> sortProductList(List<Product> sortList){
+        //sorts the list
+        Collections.sort(sortList, new Comparator<Product>() {
+            @Override
+            public int compare(Product o1, Product o2) {
+                return o1.getProductName().compareToIgnoreCase(o2.getProductName());
+            }
+        });
+        return sortList;
+    }
 
 
-
-   /* private void prepareCustomerData(){
-        Customer customer = new Customer("customercode1", "customername1","territory1");
-        customerList.add(customer);
-
-        customer = new Customer("customercode2","customername2","territory2");
-        customerList.add(customer);
-
-        customer = new Customer ("customercode3","customername3","territory1");
-        customerList.add(customer);
-
-        customer = new Customer("customercode4","customername4","territory2");
-        customerList.add(customer);
+    /*protected void onSaveInstanceState(Bundle state){
+        super.onSaveInstanceState(state);
+        mListState = mLayoutmMlayoutManager.onSaveInstance();
     }*/
+
 
 }

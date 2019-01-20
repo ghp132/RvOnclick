@@ -9,6 +9,7 @@ public class Order {
     @PrimaryKey(autoGenerate = true)
     @NonNull
     private Long orderId;
+    private Long splitFrom;
     private String customerCode;
     private int orderStatus;
     //order statuses
@@ -18,6 +19,14 @@ public class Order {
     // 2 submitted
     private String appOrderId;
     private String orderNumber;
+
+    public Long getSplitFrom() {
+        return splitFrom;
+    }
+
+    public void setSplitFrom(Long splitFrom) {
+        this.splitFrom = splitFrom;
+    }
 
     public String getOrderNumber() {
         return orderNumber;

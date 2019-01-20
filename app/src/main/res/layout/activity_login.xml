@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,7 +12,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="http://192.168.1.105:8084" />
+        android:text="http://178.128.195.103:80" />
 
     <EditText
         android:id="@+id/tv_loginEmail"
@@ -21,7 +20,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="hari.enterprises14@gmail.com" />
+        android:text="administrator" />
 
     <EditText
         android:id="@+id/tv_loginPassword"
@@ -29,7 +28,15 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPassword"
-        android:text="incorrect@14" />
+        android:text="admin" />
+
+    <ProgressBar
+        android:id="@+id/pbHeaderProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_weight="2" >
+    </ProgressBar>
 
     <Button
         android:id="@+id/bt_login"
@@ -44,10 +51,51 @@
         android:text="Get Data" />
 
     <Button
+        android:id="@+id/bt_postSampleData"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Post Orders" />
+
+    <Button
+        android:id="@+id/bt_updateStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Update Status" />
+
+    <Button
+        android:id="@+id/bt_config"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Config" />
+
+    <Button
+        android:id="@+id/bt_updateOrderStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Order Status" />
+
+    <Button
         android:id="@+id/bt_nextActivity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Next Activity" />
+
+    <Button
+        android:id="@+id/bt_postPayment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Post Payments" />
+
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/ll_postAndDelete"
@@ -55,11 +103,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/bt_postSampleData"
-            android:layout_width="174dp"
-            android:layout_height="wrap_content"
-            android:text="Post Sample Data" />
+
 
         <Button
             android:id="@+id/bt_deleteOrders"
@@ -68,6 +112,15 @@
             android:layout_weight="1"
             android:onClick="deleteOrders"
             android:text="Delete Orders" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+
+
     </LinearLayout>
 
     <ScrollView
@@ -82,7 +135,8 @@
             <TextView
                 android:id="@+id/tv_responseDisplay"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:textIsSelectable="true" />
         </LinearLayout>
     </ScrollView>
 

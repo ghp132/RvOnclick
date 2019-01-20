@@ -46,7 +46,7 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
                 .allowMainThreadQueries().build();
         invoiceList = stDatabase.stDao().getInvoicesByCustomerCode(custCode);
 
-        if (invoiceList.isEmpty()){
+        if (invoiceList.isEmpty()) {
             return view;
         } else {
             Collections.sort(invoiceList, new Comparator<Invoice>() {
@@ -66,18 +66,26 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
     }
 
     @Override
-    public void onItemClicked(View v, int postion){
-        String invoiceNo = invoiceList.get(postion).getInvoiceNumber();
-        getActivity().getIntent().putExtra("invoiceNo",invoiceNo);
-        //getActivity().getIntent().putExtra("custCode",custCode);
+    public void onItemClicked(View v, int postion) {
+        Double outstandingAmount = invoiceList.get(postion).getOutstanding();
+        if (outstandingAmount == 0) {
+            Toast.makeText(getActivity().getApplicationContext(), "No outstanding amount!", Toast.LENGTH_SHORT).show();
+        } else {
+            String invoiceNo = invoiceList.get(postion).getInvoiceNumber();
+            String company = invoiceList.get(postion).getCompany();
 
-        DialogFragment_PaymentInfo df = new DialogFragment_PaymentInfo();
-        df.setCancelable(false);
-        df.setTargetFragment(this,1);
-        df.show(getFragmentManager(),"Payment_Info");
+            getActivity().getIntent().putExtra("invoiceNo", invoiceNo);
+            getActivity().getIntent().putExtra("company", company);
+            getActivity().getIntent().putExtra("outstanding", outstandingAmount.toString());
+            //getActivity().getIntent().putExtra("custCode",custCode);
 
+            DialogFragment_PaymentInfo df = new DialogFragment_PaymentInfo();
+            df.setCancelable(false);
+            df.setTargetFragment(this, 1);
+            df.show(getFragmentManager(), "Payment_Info");
+
+        }
     }
-
 
 
 }

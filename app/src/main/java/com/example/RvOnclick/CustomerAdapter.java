@@ -30,7 +30,13 @@ public class CustomerAdapter extends RecyclerView.Adapter<CustomerAdapter.CustVi
     @Override
     public void onBindViewHolder(@NonNull CustomerAdapter.CustViewHolder custViewHolder, int i) {
         Customer customer = customerList.get(i);
-        custViewHolder.tvCustomerName.setText(customer.getCustomer_name());
+        String customerName;
+        if (customer.getDisplay_name()==null){
+            customerName = customer.getCustomer_name();
+        } else {
+            customerName=customer.getDisplay_name();
+        }
+        custViewHolder.tvCustomerName.setText(customerName);
 
     }
 

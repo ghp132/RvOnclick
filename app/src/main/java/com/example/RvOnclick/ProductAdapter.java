@@ -31,7 +31,9 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
     public void onBindViewHolder(@NonNull ProductAdapter.ProdViewHolder prodViewHolder, int i) {
         Product product = productList.get(i);
         prodViewHolder.tvProductName.setText(product.getProductName());
-        prodViewHolder.tvAdded.setText(Double.toString(product.getProductRate()));
+        prodViewHolder.tvAdded.setText(String.valueOf(product.getProductRate()));
+        prodViewHolder.tvCount.setText(String.valueOf(product.getStock()));
+        prodViewHolder.tvOrder.setText(Boolean.toString(product.getProductDisabled()));
 
 
     }

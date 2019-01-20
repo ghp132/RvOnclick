@@ -16,6 +16,52 @@ public class Payment {
     private String chequeNo;
     private String chequeDate;
     private String chequeBank;
+    //ERPNext Payment number
+    private String paymentNumber;
+    private String company;
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    //payment statuses
+    // -1 sync unattempted
+    // 0 sync attempted - result unknown
+    // 1 draft
+    // 2 submitted
+    private int paymentStatus;
+    private String appPaymentId;
+
+    //----------------------------------------------------------------
+
+
+    public String getPaymentNumber() {
+        return paymentNumber;
+    }
+
+    public void setPaymentNumber(String paymentNumber) {
+        this.paymentNumber = paymentNumber;
+    }
+
+    public String getAppPaymentId() {
+        return appPaymentId;
+    }
+
+    public void setAppPaymentId(String appPaymentId) {
+        this.appPaymentId = appPaymentId;
+    }
+
+    public int getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(int paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
 
     public Long getPaymentId() {
         return paymentId;

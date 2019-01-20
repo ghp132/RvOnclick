@@ -12,7 +12,7 @@ public class OrderProduct{
     private int orderId;
     private String productCode;
     private double qty;
-    private String companyId;
+    private String companyName;
     private double rate;
 
     public double getRate() {
@@ -56,11 +56,11 @@ public class OrderProduct{
         this.qty = qty;
     }
 
-    public String getCompanyId() {
-        return companyId;
+    public String getCompanyName() {
+        return companyName;
     }
 
-    public void setCompanyId(String companyId) {
-        this.companyId = companyId;
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
     }
 }

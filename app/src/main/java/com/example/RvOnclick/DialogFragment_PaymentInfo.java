@@ -13,6 +13,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Adapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -21,7 +22,9 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 
@@ -30,38 +33,23 @@ import java.util.List;
  */
 public class DialogFragment_PaymentInfo extends DialogFragment {
     Button btPaymentSave, btCancell;
-    EditText etPaymentAmt,etChequeNo,etChequeDate, etChequeBank;
+    EditText etPaymentAmt, etChequeNo, etChequeDate, etChequeBank;
     CheckBox cbCheque;
     TextView tvPaymentErrorInfo;
-    Double paymentAmt;
-    String chequeNo, chequeDate, chequeBank;
+    Double paymentAmt, outstanding;
+    String chequeNo, chequeDate, chequeBank, info;
     public static StDatabase stDatabase;
-    public String custCode,invoiceNo;
+    public String custCode, invoiceNo,company;
     Payment payment = new Payment();
-    Integer mYear,mMonth,mDay;
+    Payment paidAmt = new Payment();
+    Integer mYear, mMonth, mDay;
+    Long paymentId, oldPaymentid;
+    Boolean previouslyPaid;
 
 
     public DialogFragment_PaymentInfo() {
         // Required empty public constructor
     }
-
-
-
-
-
-/*
-    @Override
-    public void onAttach (Context context){
-        super.onAttach(context);
-        try{
-            mListener = (OnProductSelectedListener) context;
-        } catch (ClassCastException e){
-            throw new ClassCastException(context.toString() + //" must implement OnProductSelectedListener");
-        }
-    }
-*/
-
-
 
 
     @Override
@@ -71,13 +59,20 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
 
         custCode = getActivity().getIntent().getStringExtra("custCode");
         invoiceNo = getActivity().getIntent().getStringExtra("invoiceNo");
-
-
+        company = getActivity().getIntent().getStringExtra("company");
+        String str = getActivity().getIntent().getStringExtra("outstanding");
+        outstanding = Double.parseDouble(getActivity().getIntent().getStringExtra("outstanding"));
 
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__payment_info, container, false);
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
+        paidAmt = stDatabase.stDao().getUnsyncedPaymentByInvoiceNo(invoiceNo);
+
+        previouslyPaid = false;
+        if (paidAmt!=null){
+            oldPaymentid = paidAmt.getPaymentId();
+            previouslyPaid = true;} // in case there is an unsynced payment for the same invoice
 
 
         btCancell = view.findViewById(R.id.bt_cancel);
@@ -89,17 +84,23 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         cbCheque = view.findViewById(R.id.cb_cheque);
         tvPaymentErrorInfo = view.findViewById(R.id.tv_paymentErrorInfo);
 
-        tvPaymentErrorInfo.setText(custCode + "/n/n" + invoiceNo);
+        info = custCode + "\n" + invoiceNo;
+        if (previouslyPaid){info = info + "\n" + paidAmt.getPaymentAmt();}
+        tvPaymentErrorInfo.setText(info);
         tvPaymentErrorInfo.setVisibility(View.VISIBLE);
 
+        etPaymentAmt.setText(outstanding.toString());
+        etPaymentAmt.selectAll();
 
+        etPaymentAmt.requestFocus();
+        getDialog().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 
 
         cbCheque.setSelected(false);
         cbCheque.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked){
+                if (isChecked) {
                     etChequeBank.setVisibility(View.VISIBLE);
                     etChequeDate.setVisibility(View.VISIBLE);
                     etChequeNo.setVisibility(View.VISIBLE);
@@ -114,41 +115,79 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         btPaymentSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (etPaymentAmt.getText().toString().equals("")||etPaymentAmt.getText()==null){paymentAmt=0.00;}
-                else {paymentAmt = Double.parseDouble(etPaymentAmt.getText().toString());}
-
-                chequeNo = etChequeNo.getText().toString();
-                chequeDate = etChequeDate.getText().toString();
-                chequeBank = etChequeBank.getText().toString();
-                if (paymentAmt == 0||paymentAmt == null){
-
+                if (Double.parseDouble(etPaymentAmt.getText().toString()) > outstanding) {
                     tvPaymentErrorInfo.setVisibility(View.VISIBLE);
-                    tvPaymentErrorInfo.setText("Enter Amount!");
-                } else if (cbCheque.isChecked()){
-                    if (chequeBank.equals("")||chequeDate.equals("")||chequeNo.equals("")){
+                    tvPaymentErrorInfo.setText("Amount should be less than or equal to" + outstanding);
+                } else {
+                    if (etPaymentAmt.getText().toString().equals("") || etPaymentAmt.getText() == null) {
+                        paymentAmt = 0.00;
+                    } else {
+                        paymentAmt = Double.parseDouble(etPaymentAmt.getText().toString());
+                    }
+
+                    chequeNo = etChequeNo.getText().toString();
+                    chequeDate = etChequeDate.getText().toString();
+                    chequeBank = etChequeBank.getText().toString();
+
+                    if (paymentAmt == 0 || paymentAmt == null) { // if fields are empty or zero
+                        //don't do anything
 
                         tvPaymentErrorInfo.setVisibility(View.VISIBLE);
-                        tvPaymentErrorInfo.setText("Complete Cheque Details!");
+                        tvPaymentErrorInfo.setText("Enter Amount!");
+                    } else if (cbCheque.isChecked()) {
+                        //in case of cheque payment
+                        if (chequeBank.equals("") || chequeDate.equals("") || chequeNo.equals("")) {
+
+                            tvPaymentErrorInfo.setVisibility(View.VISIBLE);
+                            tvPaymentErrorInfo.setText("Complete Cheque Details!");
+                        } else {
+                            payment.setPaymentAmt(paymentAmt);
+                            payment.setChequeBank(chequeBank);
+                            payment.setChequeDate(chequeDate);
+                            payment.setChequeNo(chequeNo);
+                            payment.setCustomerCode(custCode);
+                            payment.setInvoiceNo(invoiceNo);
+                            payment.setCompany(company);
+                            payment.setChequePayment(true);
+                            payment.setPaymentStatus(-1);
+
+                            if (previouslyPaid){
+                                payment.setPaymentId(oldPaymentid);
+                                stDatabase.stDao().updatePayment(payment);
+                                paymentId = oldPaymentid;
+
+                            } else {
+                                paymentId = stDatabase.stDao().makePayment(payment);
+                            }
+
+                            //creating and updating unique payment id
+                            stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
+
+                            getDialog().dismiss();
+
+                        }
                     } else {
                         payment.setPaymentAmt(paymentAmt);
-                        payment.setChequeBank(chequeBank);
-                        payment.setChequeDate(chequeDate);
-                        payment.setChequeNo(chequeNo);
                         payment.setCustomerCode(custCode);
                         payment.setInvoiceNo(invoiceNo);
-                        payment.setChequePayment(true);
-                        stDatabase.stDao().makePayment(payment);
+                        payment.setPaymentStatus(-1);
+                        payment.setCompany(company);
+                        payment.setChequePayment(false);
+
+                        if (previouslyPaid){
+                            payment.setPaymentId(oldPaymentid);
+                            stDatabase.stDao().updatePayment(payment);
+                            paymentId = oldPaymentid;
+                        } else {
+                            paymentId = stDatabase.stDao().makePayment(payment);
+                        }
+
+                        //creating and updating unique payment id
+                        stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
+
                         getDialog().dismiss();
-
                     }
-                }else {
-                    payment.setPaymentAmt(paymentAmt);
-                    payment.setCustomerCode(custCode);
-                    payment.setInvoiceNo(invoiceNo);
-                    stDatabase.stDao().makePayment(payment);
-                    getDialog().dismiss();
                 }
-
 
 
             }
@@ -164,7 +203,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         etChequeDate.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus){
+                if (hasFocus) {
                     final Calendar calendar = Calendar.getInstance();
                     mYear = calendar.get(Calendar.YEAR);
                     mMonth = calendar.get(Calendar.MONTH);
@@ -174,15 +213,23 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                             , new DatePickerDialog.OnDateSetListener() {
                         @Override
                         public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                            etChequeDate.setText(dayOfMonth + "-" + (month+1) + "-" + year);
+                            etChequeDate.setText(dayOfMonth + "-" + (month + 1) + "-" + year);
 
                         }
-                    },mYear,mMonth,mDay);
+                    }, mYear, mMonth, mDay);
                     datePickerDialog.show();
                 }
             }
         });
 
         return view;
+    }
+
+    public String CreateUniqueAppPaymentId(Long paymentId) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyymmddhhmmss");
+        String ts = simpleDateFormat.format(new Date());
+        String uniqueAppPaymentId = ts + paymentId + "P";
+        return uniqueAppPaymentId;
+
     }
 }

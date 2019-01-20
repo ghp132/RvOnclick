@@ -21,7 +21,8 @@ public class CustomerTransactionActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         final String custCode = intent.getStringExtra("custCode");
-
+        String str = intent.getStringExtra("fromOrderList");
+        Boolean fromOrderList = Boolean.parseBoolean(intent.getStringExtra("fromOrderList"));
 
         Bundle bundle = new Bundle();
         bundle.putString("custCode", custCode);
@@ -40,6 +41,11 @@ public class CustomerTransactionActivity extends AppCompatActivity {
         final ProductPagerAdapter adapter = new ProductPagerAdapter(getSupportFragmentManager(),tabLayout.getTabCount(),bundle);
         viewPager.setAdapter(adapter);
 
+
+
+        if (fromOrderList){
+            viewPager.setCurrentItem(1);
+        }
 
 
 
