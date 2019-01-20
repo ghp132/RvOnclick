@@ -168,6 +168,9 @@ public interface StDao {
     @Query("select * from `Order` where orderStatus = :orderStatus")
     List<Order> getOrderByOrderStatus(int orderStatus);
 
+    @Query("select * from `Order` where orderId = :orderId")
+    Order getOrderByOrderId(Long orderId);
+
     @Query("select sum(rate*qty) from OrderProduct where orderId=:orderId")
     double getOrderTotalValueByOrderId(Long orderId);
 
@@ -212,6 +215,9 @@ public interface StDao {
 
     @Query("select * from Account where parentAccount = :parentAccount")
     List<Account> getAccountByParentAccount(String parentAccount);
+
+    @Query("select * from Account where accountName = :accountName")
+    Account getAccountByAccountName(String accountName);
 
 
 

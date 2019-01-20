@@ -10,7 +10,7 @@ public class Order {
     @NonNull
     private Long orderId;
     private Long splitFrom;
-    private String customerCode;
+    private String customerCode, companyName;
     private int orderStatus;
     //order statuses
     // -1 sync unattempted
@@ -19,6 +19,14 @@ public class Order {
     // 2 submitted
     private String appOrderId;
     private String orderNumber;
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
 
     public Long getSplitFrom() {
         return splitFrom;

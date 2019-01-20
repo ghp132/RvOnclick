@@ -2,6 +2,7 @@ package com.example.RvOnclick;
 
 import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
@@ -23,6 +24,8 @@ import java.util.Date;
 import java.util.List;
 
 public class ApplicationController {
+
+    public static String TAG = "ApplicationController";
 
     public static StDatabase stDatabase;
 
@@ -165,7 +168,7 @@ public class ApplicationController {
                         for (OrderProduct op : orderProductList) {
                             if (op.getCompanyName().equals(company)) {
                                 //create new order with product
-                                newOrderId = createNewOrderIfNotExists(newOrderId, customer, order.getOrderId());
+                                newOrderId = createNewOrderIfNotExists(newOrderId, customer, order.getOrderId(), company);
                                 OrderProduct newOp = op;
                                 stDatabase.stDao().deleteOrderProduct(op);
                                 newOp.setOrderId(Integer.valueOf(String.valueOf(newOrderId)));
@@ -178,10 +181,10 @@ public class ApplicationController {
                 }
                 counter++;
             }
-        } else if (stDatabase.stDao().countCompany()==1){
+        } else if (stDatabase.stDao().countCompany() == 1) {
             List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(order.getOrderId());
             Company company = stDatabase.stDao().getAllCompanies().get(0);
-            for (OrderProduct op : orderProductList){
+            for (OrderProduct op : orderProductList) {
                 op.setCompanyName(company.getCompanyName());
             }
 
@@ -189,16 +192,88 @@ public class ApplicationController {
         }
     }
 
+    public JSONArray getTaxArray(Long orderId) {
+        String CONFIG_CGST_NAME, CONFIG_SGST_NAME, CONFIG_IGST_NAME;
+        CONFIG_CGST_NAME = "cgstAccountName";
+        CONFIG_IGST_NAME = "igstAccountName";
+        CONFIG_SGST_NAME = "sgstAccountName";
+        JSONArray taxes = new JSONArray();
+        //get order
+        Order order = stDatabase.stDao().getOrderByOrderId(orderId);
+        //get company
+        String companyName = order.getCompanyName();
+        //get abbr
+        Company company = stDatabase.stDao().getCompanyByName(companyName);
+        String companyAbbr = company.getAbbr();
+        //check inter or intrastate(Later)
+        // get inter or intrastate account after checking isGroup child
+        //includer if-intrastate(Later)
+        TblSettings configCgst = stDatabase.stDao().getConfigByName(CONFIG_CGST_NAME);
+        String cgstAccountName = configCgst.getSvalues();
+        TblSettings configSgst = stDatabase.stDao().getConfigByName(CONFIG_SGST_NAME);
+        String sgstAccountName = configSgst.getSvalues();
+
+        List<Account> cgstAccountList = getChildAccountNames(cgstAccountName);
+        JSONObject taxesC = prepareTaxJson(cgstAccountList, company);
+        List<Account> sgstAccountList = getChildAccountNames(sgstAccountName);
+        JSONObject taxesS = prepareTaxJson(sgstAccountList, company);
+
+        taxes.put(taxesC);
+        taxes.put(taxesS);
 
 
+        // create json object for each tax account
+        //add to json array
+        return taxes;
+    }
 
-    public Long createNewOrderIfNotExists(Long orderId, Customer customer, Long splitFrom ) {
+    //prepare individual tax Json
+    public JSONObject prepareTaxJson(List<Account> taxAccountList, Company company) {
+        String companyAbbr = company.getAbbr();
+        JSONObject taxes = new JSONObject();
+        for (Account account : taxAccountList) {
+            String accountHead, docType, chargeType, description, includedInPrintRate;
+            accountHead = account.getAccountName() + " - " + companyAbbr;
+            docType = "Sales Taxes and Charges";
+            chargeType = "On Net Total";
+            description = accountHead;
+            includedInPrintRate = "1";
+            try {
+                taxes.put("account_head", accountHead);
+                taxes.put("doctype", docType);
+                taxes.put("charge_type", chargeType);
+                taxes.put("description", description);
+                taxes.put("included_in_print_rate", includedInPrintRate);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Log.d(TAG, "prepareTaxJson: " + "Error while creating Json Object");
+            }
+        }
+        return taxes;
+    }
+
+    //gets child account arraylist if account name isGroup
+    public List<Account> getChildAccountNames(String accountName) {
+        List<Account> accountList = new ArrayList<>();
+        Account inputAccount = stDatabase.stDao().getAccountByAccountName(accountName);
+        int isGroup = inputAccount.getIsGroup();
+        if (isGroup == 1) {
+            accountList = stDatabase.stDao().getAccountByParentAccount(accountName);
+        } else {
+            accountList.add(inputAccount);
+        }
+        return accountList;
+    }
+
+
+    public Long createNewOrderIfNotExists(Long orderId, Customer customer, Long splitFrom, String companyName) {
         if (orderId == -1) {
             Order order = new Order();
             String custCode = customer.getCustomer_id();
             order.setCustomerCode(custCode);
             order.setOrderStatus(-1);
             order.setSplitFrom(splitFrom);
+            order.setCompanyName(companyName);
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyymmddhhmmss");
             String ts = simpleDateFormat.format(new Date());
             order.setAppOrderId(ts + orderId + "R");
@@ -211,11 +286,11 @@ public class ApplicationController {
         return orderId;
     }
 
-    public void newOrderProduct(OrderProduct orderProduct){
+    public void newOrderProduct(OrderProduct orderProduct) {
         Boolean notPresent = true;
         List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderProduct.getOrderId());
-        for (OrderProduct op : orderProductList){
-            if (op.getProductCode().equals(orderProduct.getProductCode())){
+        for (OrderProduct op : orderProductList) {
+            if (op.getProductCode().equals(orderProduct.getProductCode())) {
                 int orderProductId = op.getOrderProductId();
                 stDatabase.stDao().updateOrderProduct(orderProduct);
                 notPresent = false;

@@ -22,7 +22,7 @@ public class ActivityConfig extends AppCompatActivity {
     static String defaultPriceList;
     EditText etSgstAccount, etCgstAccount, etIgstAccount;
     String cgstAccount, sgstAccount, igstAccount;
-    static String CONFIG_CGST_NAME, CONFIG_SGST_NAME, CONFIG_IGST_NAME;
+    public static String CONFIG_CGST_NAME, CONFIG_SGST_NAME, CONFIG_IGST_NAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
