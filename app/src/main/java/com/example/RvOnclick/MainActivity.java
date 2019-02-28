@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.content.PermissionChecker;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,6 +13,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+
+import com.google.android.gms.location.LocationServices;
+
+import java.security.Permission;
 
 public class MainActivity extends AppCompatActivity {
     
@@ -24,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
+
+
 
         tabLayout.addTab( tabLayout.newTab().setText("Customers"));
         tabLayout.addTab(tabLayout.newTab().setText("Summary"));

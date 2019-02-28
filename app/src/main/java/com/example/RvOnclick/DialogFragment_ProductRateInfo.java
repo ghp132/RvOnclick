@@ -49,6 +49,8 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         orderId = Long.parseLong(getArguments().getString("orderId"));
         custCode = getArguments().getString("custCode");
 
+        ApplicationController ac = new ApplicationController();
+
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__product_rate_info, container, false);
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
@@ -165,6 +167,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
     //Adds items to the order in OrderProduct database table
     public void AddProductToOrder(long orderId, String prodCode, double qty, double rate) {
+        ApplicationController ac = new ApplicationController();
         Product product = stDatabase.stDao().getProductByProductCode(prodCode);
         String companyName = product.getProductCompany();
         OrderProduct orderProduct = new OrderProduct();
@@ -181,6 +184,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
                 int orderProductId = op.getOrderProductId();
                 stDatabase.stDao().updateOrderProductById(qty, rate, orderProductId);
                 notPresent = false;
+                ac.updateCurrentOrderQty(orderId,stDatabase);
                 break;
             }
         }
@@ -188,8 +192,10 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
             //Company company = stDatabase.stDao().getCompanyByCompanyName()
             //orderProduct = createGstJsonArray()
             stDatabase.stDao().addProductToOrder(orderProduct);
+            ac.updateCurrentOrderQty(orderId, stDatabase);
         }
     }
+
 
     public void deleteOrder(Long orderId) {
         stDatabase.stDao().deleteOrderByOrderId(orderId);

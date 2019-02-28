@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rl_rvl1"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:paddingLeft="0dp"
+    android:paddingTop="0dp"
+    android:paddingRight="0dp"
+    android:paddingBottom="@dimen/row_padding_vertical"
+    tools:background="@android:color/background_dark">
+
+    <android.support.v7.widget.CardView xmlns:card_view="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/card_view"
+        android:layout_width="380dp"
+        android:layout_height="65dp"
+        android:layout_gravity="center"
+        android:layout_marginLeft="0dp"
+        android:layout_marginTop="0dp"
+        android:layout_marginRight="0dp"
+        android:layout_marginBottom="0dp"
+        card_view:cardCornerRadius="4dp"
+        card_view:cardElevation="0dp"
+        card_view:cardUseCompatPadding="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/rv1_ll_firstLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="0dp"
+
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tv_rv1Heading"
+                    android:layout_width="279dp"
+                    android:layout_height="38dp"
+                    android:layout_marginEnd="3dp"
+                    android:text="Heading"
+                    android:textColor="@color/productName"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_rv1Info1"
+                    android:layout_width="68dp"
+                    android:layout_height="19dp"
+                    android:layout_gravity="center_vertical"
+                    android:text="info1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rv1_ll_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:layout_marginEnd="0dp">
+
+                <TextView
+                    android:id="@+id/tv_rv1Info2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    android:layout_weight="1"
+                    android:text="info2" />
+
+                <TextView
+                    android:id="@+id/tv_rv1Info3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="1dp"
+                    android:layout_marginTop="0dp"
+                    android:layout_weight="1"
+                    android:text="info3" />
+
+                <TextView
+                    android:id="@+id/tv_rv1Info4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:layout_marginEnd="0dp"
+                    android:layout_weight="1"
+                    android:text="info4" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </android.support.v7.widget.CardView>
+
+
+</RelativeLayout>

@@ -2,6 +2,7 @@ package com.example.RvOnclick;
 
 import android.app.Activity;
 import android.content.Context;
+import android.location.Location;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -28,6 +29,7 @@ public class ApplicationController {
     public static String TAG = "ApplicationController";
 
     public static StDatabase stDatabase;
+
 
 
     public List<Customer> sortCustomerList(List<Customer> sortList) {
@@ -97,6 +99,7 @@ public class ApplicationController {
                 st.setSvalues(configValue);
                 stDatabase.stDao().updateConfig(st);
             }
+
         }
         if (!present) {
             setting.setDefn(configName);
@@ -147,7 +150,7 @@ public class ApplicationController {
         Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
     }
 
-    public void splitProductListByCompany(Order order) {
+    public void splitProductListByCompany(Order order, StDatabase stDatabase) {
         if (stDatabase.stDao().countCompany() > 1) {
             Long orderId = order.getOrderId();
 
@@ -168,7 +171,7 @@ public class ApplicationController {
                         for (OrderProduct op : orderProductList) {
                             if (op.getCompanyName().equals(company)) {
                                 //create new order with product
-                                newOrderId = createNewOrderIfNotExists(newOrderId, customer, order.getOrderId(), company);
+                                newOrderId = createNewOrderIfNotExists(newOrderId, customer, order.getOrderId(), company, stDatabase);
                                 OrderProduct newOp = op;
                                 stDatabase.stDao().deleteOrderProduct(op);
                                 newOp.setOrderId(Integer.valueOf(String.valueOf(newOrderId)));
@@ -178,8 +181,9 @@ public class ApplicationController {
 
                         }
                     }
+                    counter++;
                 }
-                counter++;
+
             }
         } else if (stDatabase.stDao().countCompany() == 1) {
             List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(order.getOrderId());
@@ -187,12 +191,14 @@ public class ApplicationController {
             for (OrderProduct op : orderProductList) {
                 op.setCompanyName(company.getCompanyName());
             }
+            order.setCompanyName(company.getCompanyName());
+            stDatabase.stDao().updateOrder(order);
 
 
         }
     }
 
-    public JSONArray getTaxArray(Long orderId) {
+    public JSONArray getTaxArray(Long orderId, StDatabase stDatabase) {
         String CONFIG_CGST_NAME, CONFIG_SGST_NAME, CONFIG_IGST_NAME;
         CONFIG_CGST_NAME = "cgstAccountName";
         CONFIG_IGST_NAME = "igstAccountName";
@@ -209,18 +215,30 @@ public class ApplicationController {
         // get inter or intrastate account after checking isGroup child
         //includer if-intrastate(Later)
         TblSettings configCgst = stDatabase.stDao().getConfigByName(CONFIG_CGST_NAME);
-        String cgstAccountName = configCgst.getSvalues();
+        String cgstAccountName;
+        if (configCgst == null){
+            cgstAccountName = "CGST";
+        } else {
+            cgstAccountName = configCgst.getSvalues();
+        }
+
         TblSettings configSgst = stDatabase.stDao().getConfigByName(CONFIG_SGST_NAME);
-        String sgstAccountName = configSgst.getSvalues();
+        String sgstAccountName;
+        if (configSgst == null){
+            sgstAccountName = "SGST";
+        } else {
+            sgstAccountName = configSgst.getSvalues();
+        }
 
-        List<Account> cgstAccountList = getChildAccountNames(cgstAccountName);
-        JSONObject taxesC = prepareTaxJson(cgstAccountList, company);
-        List<Account> sgstAccountList = getChildAccountNames(sgstAccountName);
-        JSONObject taxesS = prepareTaxJson(sgstAccountList, company);
 
-        taxes.put(taxesC);
-        taxes.put(taxesS);
+        List<Account> cgstAccountList = getChildAccountNames(cgstAccountName,company, stDatabase);
 
+        for (Account account:cgstAccountList){
+
+        }
+        taxes = prepareTaxJson(cgstAccountList, company, stDatabase, taxes);
+        List<Account> sgstAccountList = getChildAccountNames(sgstAccountName,company, stDatabase);
+        taxes = prepareTaxJson(sgstAccountList, company, stDatabase, taxes);
 
         // create json object for each tax account
         //add to json array
@@ -228,10 +246,10 @@ public class ApplicationController {
     }
 
     //prepare individual tax Json
-    public JSONObject prepareTaxJson(List<Account> taxAccountList, Company company) {
+    private JSONArray prepareTaxJson(List<Account> taxAccountList, Company company, StDatabase stDatabase,JSONArray taxes) {
         String companyAbbr = company.getAbbr();
-        JSONObject taxes = new JSONObject();
         for (Account account : taxAccountList) {
+            JSONObject taxesJson = new JSONObject();
             String accountHead, docType, chargeType, description, includedInPrintRate;
             accountHead = account.getAccountName() + " - " + companyAbbr;
             docType = "Sales Taxes and Charges";
@@ -239,11 +257,12 @@ public class ApplicationController {
             description = accountHead;
             includedInPrintRate = "1";
             try {
-                taxes.put("account_head", accountHead);
-                taxes.put("doctype", docType);
-                taxes.put("charge_type", chargeType);
-                taxes.put("description", description);
-                taxes.put("included_in_print_rate", includedInPrintRate);
+                taxesJson.put("account_head", accountHead);
+                taxesJson.put("doctype", docType);
+                taxesJson.put("charge_type", chargeType);
+                taxesJson.put("description", description);
+                taxesJson.put("included_in_print_rate", includedInPrintRate);
+                taxes.put(taxesJson);
             } catch (JSONException e) {
                 e.printStackTrace();
                 Log.d(TAG, "prepareTaxJson: " + "Error while creating Json Object");
@@ -253,9 +272,11 @@ public class ApplicationController {
     }
 
     //gets child account arraylist if account name isGroup
-    public List<Account> getChildAccountNames(String accountName) {
+    public List<Account> getChildAccountNames(String accountName,Company company, StDatabase stDatabase) {
         List<Account> accountList = new ArrayList<>();
-        Account inputAccount = stDatabase.stDao().getAccountByAccountName(accountName);
+        String companyAbbr = company.getAbbr();
+        accountName = accountName + " - " + companyAbbr;
+        Account inputAccount = stDatabase.stDao().getAccountByName(accountName);
         int isGroup = inputAccount.getIsGroup();
         if (isGroup == 1) {
             accountList = stDatabase.stDao().getAccountByParentAccount(accountName);
@@ -266,7 +287,7 @@ public class ApplicationController {
     }
 
 
-    public Long createNewOrderIfNotExists(Long orderId, Customer customer, Long splitFrom, String companyName) {
+    public Long createNewOrderIfNotExists(Long orderId, Customer customer, Long splitFrom, String companyName, StDatabase stDatabase) {
         if (orderId == -1) {
             Order order = new Order();
             String custCode = customer.getCustomer_id();
@@ -301,6 +322,43 @@ public class ApplicationController {
             stDatabase.stDao().addProductToOrder(orderProduct);
         }
     }
+
+    public void updateCurrentOrderQty(Long orderId, StDatabase stDatabase){
+
+        List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
+        List<Product> productList = stDatabase.stDao().getAllProducts();
+        for (OrderProduct op:orderProductList){
+            String opCode = op.getProductCode();
+            Double opQty = op.getQty();
+            for (Product p : productList){
+                String pCode = p.getProductCode();
+                if (opCode.equals(pCode)){
+                    p.setCurrentOrderQty(opQty);
+                } else {
+                    p.setCurrentOrderQty(0.00);
+                }
+            }
+        }
+    }
+
+    public List<Customer> filterCustomersByProximity(List<Customer> customerList, Location currentLocation){
+        List<Customer> nearbyCustomers = new ArrayList<>();
+        for (Customer customer:customerList) {
+            Location customerLocation = new Location("point A");
+            if (customer.getLatitude() != null && customer.getLatitude() != null) {
+                customerLocation.setLatitude(customer.getLatitude());
+                customerLocation.setLongitude(customer.getLongitude());
+
+                float distance = currentLocation.distanceTo(customerLocation);
+                if (distance < 100) {
+                    nearbyCustomers.add(customer);
+                }
+            }
+        }
+
+        return  nearbyCustomers;
+    }
+
 
 }
 

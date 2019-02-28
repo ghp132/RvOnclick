@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -22,8 +23,9 @@ import java.util.List;
  */
 public class TabFragment2 extends Fragment implements AdapterOrder.OnItemClickListener {
     StDatabase stDatabase;
-    List<Order> orderList;
+    List<Order> orderList = new ArrayList<>();
     List<OrderProduct> orderProductList;
+    AdapterOrder adapterOrder;
     private AdapterOrder.OnItemClickListener listener;
 
     TextView textView;
@@ -70,18 +72,18 @@ public class TabFragment2 extends Fragment implements AdapterOrder.OnItemClickLi
         }
         textView.setText(ordersList);
 
-        if (ordersList.isEmpty()){
-            return  view;
-        } else {
+        //if (ordersList.isEmpty()){
+        //    return  view;
+        //} else {
             RecyclerView recyclerView = view.findViewById(R.id.order_recyclerview);
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
             listener = this;
-            AdapterOrder adapterOrder = new AdapterOrder(listener, orderList, getActivity());
+            adapterOrder = new AdapterOrder(listener, orderList, getActivity());
             recyclerView.setAdapter(adapterOrder);
             recyclerView.setItemAnimator(new DefaultItemAnimator());
             return view;
 
-        }
+        //}
 
 
 
@@ -98,6 +100,19 @@ public class TabFragment2 extends Fragment implements AdapterOrder.OnItemClickLi
         intent.putExtra("fromOrderList","true");
         //Toast.makeText(getActivity().getApplicationContext(),orderId.toString(),Toast.LENGTH_SHORT).show();
         getActivity().startActivity(intent);
+    }
+
+    @Override
+    public void onResume(){
+        updateOrderListFromDB();
+        super.onResume();
+
+    }
+
+    private void updateOrderListFromDB(){
+        orderList.clear();
+        orderList.addAll(stDatabase.stDao().getAllOrder());
+        adapterOrder.notifyDataSetChanged();
     }
 
 }

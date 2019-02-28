@@ -3,6 +3,7 @@
     package="com.example.RvOnclick">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
     <application
         android:allowBackup="true"
@@ -20,7 +21,8 @@
             </intent-filter>
         </activity>
         <activity android:name=".CustomerTransactionActivity" />
-        <activity android:name=".ActivityConfig"></activity>
+        <activity android:name=".ActivityConfig" />
+        <activity android:name=".EggSalesActivity"></activity>
     </application>
 
 </manifest>

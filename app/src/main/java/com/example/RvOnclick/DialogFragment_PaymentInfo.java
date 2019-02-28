@@ -32,7 +32,7 @@ import java.util.List;
  * A simple {@link Fragment} subclass.
  */
 public class DialogFragment_PaymentInfo extends DialogFragment {
-    Button btPaymentSave, btCancell;
+    Button btPaymentSave, btCancell, btPaymentDelete;
     EditText etPaymentAmt, etChequeNo, etChequeDate, etChequeBank;
     CheckBox cbCheque;
     TextView tvPaymentErrorInfo;
@@ -62,6 +62,8 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         company = getActivity().getIntent().getStringExtra("company");
         String str = getActivity().getIntent().getStringExtra("outstanding");
         outstanding = Double.parseDouble(getActivity().getIntent().getStringExtra("outstanding"));
+        getActivity().getIntent().putExtra("deletePayment",0);//will be set to 1 when delete is clicked
+        //paidAmt = Double.valueOf(getActivity().getIntent().getStringExtra("paidAmt"));
 
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__payment_info, container, false);
@@ -72,11 +74,14 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         previouslyPaid = false;
         if (paidAmt!=null){
             oldPaymentid = paidAmt.getPaymentId();
-            previouslyPaid = true;} // in case there is an unsynced payment for the same invoice
+            previouslyPaid = true;
+            paymentId = oldPaymentid;
+        } // in case there is an unsynced payment for the same invoice
 
 
         btCancell = view.findViewById(R.id.bt_cancel);
         btPaymentSave = view.findViewById(R.id.bt_paymentSave);
+        btPaymentDelete = view.findViewById(R.id.bt_paymentDelete);
         etChequeBank = view.findViewById(R.id.et_bank);
         etChequeDate = view.findViewById(R.id.et_chequeDate);
         etChequeNo = view.findViewById(R.id.et_chequeNumber);
@@ -86,10 +91,18 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
 
         info = custCode + "\n" + invoiceNo;
         if (previouslyPaid){info = info + "\n" + paidAmt.getPaymentAmt();}
+        if (getTargetRequestCode()==102){
+            btPaymentDelete.setVisibility(View.VISIBLE);
+
+        }
         tvPaymentErrorInfo.setText(info);
         tvPaymentErrorInfo.setVisibility(View.VISIBLE);
 
-        etPaymentAmt.setText(outstanding.toString());
+        if (getTargetRequestCode()==102){
+            etPaymentAmt.setText(paidAmt.getPaymentAmt().toString());
+        } else {
+            etPaymentAmt.setText(outstanding.toString());
+        }
         etPaymentAmt.selectAll();
 
         etPaymentAmt.requestFocus();
@@ -163,6 +176,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                             //creating and updating unique payment id
                             stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
 
+                            getTargetFragment().onActivityResult(getTargetRequestCode(), 1, getActivity().getIntent());
                             getDialog().dismiss();
 
                         }
@@ -184,6 +198,8 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
 
                         //creating and updating unique payment id
                         stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
+
+                        getTargetFragment().onActivityResult(getTargetRequestCode(), 1, getActivity().getIntent());
 
                         getDialog().dismiss();
                     }
@@ -219,6 +235,15 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                     }, mYear, mMonth, mDay);
                     datePickerDialog.show();
                 }
+            }
+        });
+
+        btPaymentDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stDatabase.stDao().deletePaymentByPaymentId(paymentId);
+                getTargetFragment().onActivityResult(getTargetRequestCode(), 1, getActivity().getIntent());
+                dismiss();
             }
         });
 

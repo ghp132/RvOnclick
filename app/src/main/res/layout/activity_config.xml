@@ -27,7 +27,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/et_IGST_account" />
+                app:layout_constraintTop_toBottomOf="@+id/sw_locationFilter" />
 
             <TextView
                 android:id="@+id/textView3"
@@ -107,6 +107,16 @@
                 android:inputType="textPersonName"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/et_SGST_account" />
+
+            <Switch
+                android:id="@+id/sw_locationFilter"
+                android:layout_width="264dp"
+                android:layout_height="31dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:text="Use Location Filter"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/et_IGST_account" />
 
         </android.support.constraint.ConstraintLayout>
     </ScrollView>

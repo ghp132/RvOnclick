@@ -99,4 +99,13 @@
         android:text="TextView"
         android:visibility="gone" />
 
+    <Button
+        android:id="@+id/bt_paymentDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/bt_cancel"
+        android:layout_centerHorizontal="true"
+        android:text="Delete"
+        android:visibility="invisible" />
+
 </RelativeLayout>

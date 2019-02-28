@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -42,11 +43,12 @@ import java.util.Map;
 public class LoginActivity extends AppCompatActivity {
     EditText tvLoginEmail, tvLoginPassword, tvUrl;
     Button btLogin, btGetData, btNextActivity, btPostOrders, btPostPayments,
-            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig;
+            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig,btEggSales;
     String loginEmail, loginPassword, loginUrl, siteUrl;
     public static StDatabase stDatabase;
     public boolean newData;
     ApplicationController ac = new ApplicationController();
+    private String TAG = "LoginActivity";
 
 
     @Override
@@ -64,6 +66,7 @@ public class LoginActivity extends AppCompatActivity {
         btUpdateUnknownPayments = findViewById(R.id.bt_updateStatus);
         btUpdateUnknownOrders = findViewById(R.id.bt_updateOrderStatus);
         btConfig = findViewById(R.id.bt_config);
+        btEggSales = findViewById(R.id.bt_eggSales);
         newData = false;
 
         //final String companyAbbreviation = "HE";
@@ -110,6 +113,14 @@ public class LoginActivity extends AppCompatActivity {
         loginPassword = tvLoginPassword.getText().toString();
         loginUrl = tvUrl.getText().toString();
 
+        final Intent eggSalesIntent = new Intent(this,EggSalesActivity.class);
+        btEggSales.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(eggSalesIntent);
+            }
+        });
+
         btLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -133,7 +144,7 @@ public class LoginActivity extends AppCompatActivity {
         btUpdateUnknownPayments.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //updateUnknownPaymentStatuses(loginUrl, getApplicationContext());
+                updateUnknownPaymentStatuses(loginUrl, getApplicationContext());
                 updateUnknownOrderStatuses(loginUrl,getApplicationContext());
             }
         });
@@ -310,6 +321,11 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 getSellingPriceList2(getApplicationContext());
 
+                if (stDatabase.stDao().countAccounts() != 0) {
+                    stDatabase.stDao().deleteAllAccounts();
+                }
+                getAccounts(getApplicationContext());
+
 
             }
         });
@@ -389,7 +405,7 @@ public class LoginActivity extends AppCompatActivity {
                 e.printStackTrace();
                 Toast.makeText(getApplicationContext(), "Error in jsonObjPayment", Toast.LENGTH_SHORT).show();
             }
-
+            Log.d(TAG, "postPayments: \n" + jsonObjPayment.toString());
             String url = loginUrl + "/api/resource/Payment%20Entry/";
             RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
             JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
@@ -420,7 +436,9 @@ public class LoginActivity extends AppCompatActivity {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     error.printStackTrace();
-                    Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(),
+                            "Cannot post payments!\n" + error.toString(), Toast.LENGTH_SHORT).show();
+
 
 
                 }
@@ -452,6 +470,7 @@ public class LoginActivity extends AppCompatActivity {
         List<Order> unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
         int responseCounter = 0;
         for (Order order : unsycedOrderList) {
+            ac.splitProductListByCompany(order,stDatabase);
             responseCounter = responseCounter + 1;
             info = info + "\n\n";
             String appOrderId = order.getAppOrderId();
@@ -484,34 +503,13 @@ public class LoginActivity extends AppCompatActivity {
             order.setOrderStatus(0);
             stDatabase.stDao().updateOrder(order);
             try {
-                params.put("delivery_date", deliveryDate);
+                //params.put("delivery_date", deliveryDate);
                 params.put("customer", custCode);
                 params.put("items", jsonArray);
-                params.put("app_order_id", appOrderId);
+                params.put("app_invoice_id", appOrderId);
 
-                //applying tax -cgst
-                taxesC.put("account_head", "IGST @ 18% - HE");
-                taxesC.put("doctype", "Sales Taxes and Charges");
-                taxesC.put("charge_type", "On Net Total");
-                taxesC.put("description", "IGST @ 18%");
-                taxesC.put("included_in_print_rate", "1");
 
-                //applying tax -sgst
-                taxesS.put("account_head", "IGST @ 12% - HE");
-                taxesS.put("doctype", "Sales Taxes and Charges");
-                taxesS.put("charge_type", "On Net Total");
-                taxesS.put("description", "IGST @ 12%");
-                taxesS.put("included_in_print_rate", "1");
-
-                taxesI.put("account_head", "IGST @ 5% - HE");
-                taxesI.put("doctype", "Sales Taxes and Charges");
-                taxesI.put("charge_type", "On Net Total");
-                taxesI.put("description", "IGST @ 5%");
-                taxesI.put("included_in_print_rate", "1");
-
-                taxes.put(taxesC);
-                taxes.put(taxesS);
-                taxes.put(taxesI);
+                taxes = ac.getTaxArray(orderId, stDatabase);
                 params.put("taxes", taxes);
 
                 params.put("taxes_and_charges", "In State GST Inclusive - HE");
@@ -519,10 +517,11 @@ public class LoginActivity extends AppCompatActivity {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+
             info = info + "\n" + params.toString();
             textView.setText(info);
 
-            String url = loginUrl + "/api/resource/Sales%20Order/";
+            String url = loginUrl + "/api/resource/Sales%20Invoice/";
             RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
             JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
                     url, params,
@@ -668,7 +667,7 @@ public class LoginActivity extends AppCompatActivity {
         final List<Order> unknownOrders = stDatabase.stDao().getOrderByOrderStatus(0);
         final int pageLimitLength = 500;
 
-        url = loginUrl + "/api/resource/Sales%20Order?fields=[\"name\",\"app_order_id\",\"docstatus\"]&limit_page_length=" + pageLimitLength;
+        url = loginUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"app_invoice_id\",\"docstatus\"]&limit_page_length=" + pageLimitLength;
         requestQueue = Volley.newRequestQueue(LoginActivity.this);
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
@@ -691,7 +690,7 @@ public class LoginActivity extends AppCompatActivity {
                             for (int t = 0; t <= pageLimitLength - 1; t++) {
                                 try {
                                     jsonObject = jsonArray.getJSONObject(t);
-                                    String appOrderId = jsonObject.getString("app_order_id");
+                                    String appOrderId = jsonObject.getString("app_invoice_id");
                                     String orderNumber = jsonObject.getString("name");
                                     if (appOrderId.equals(mobileAppOrderId)) {
                                         if (jsonObject.getInt("docstatus") == 1) {
@@ -730,7 +729,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void getAccounts(Context ctx) {
-        String url = loginUrl + "/api/resource/Account/?fields=[\"name\",\"account_name\",\"account_type\",\"parent_account\",\"company\"]&limit_page_length=1000";
+        String url = loginUrl + "/api/resource/Account/?fields=[\"name\",\"account_name\",\"account_type\",\"parent_account\",\"company\",\"is_group\"]&limit_page_length=1000";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
@@ -743,11 +742,13 @@ public class LoginActivity extends AppCompatActivity {
                             for (int i = 0; i < data.length(); i++) {
                                 jsonObject = data.getJSONObject(i);
                                 String name, accountName, parentAccount, company, accountType;
+                                int isGroup;
                                 name = jsonObject.getString("name");
                                 accountName = jsonObject.getString("account_name");
                                 parentAccount = jsonObject.getString("parent_account");
                                 accountType = jsonObject.getString("account_type");
                                 company = jsonObject.getString("company");
+                                isGroup = jsonObject.getInt("is_group");
 
                                 Account account = new Account();
                                 account.setAccountName(accountName);
@@ -755,6 +756,7 @@ public class LoginActivity extends AppCompatActivity {
                                 account.setCompany(company);
                                 account.setName(name);
                                 account.setParentAccount(parentAccount);
+                                account.setIsGroup(isGroup);
 
                                 stDatabase.stDao().addAccount(account);
                             }
@@ -902,6 +904,8 @@ public class LoginActivity extends AppCompatActivity {
                                 String customer_id = customer.getString("name");
                                 String customer_group = customer.getString("customer_group");
                                 String price_list = customer.getString("default_price_list");
+                                //Double latitude = customer.getDouble("customer_latitude");
+                                //Double longitude = customer.getDouble("customer_longitude");
                                 String display_name = null;
                                 if (customer.has("display_name")) {
                                     display_name = customer.getString("display_name");
@@ -915,6 +919,8 @@ public class LoginActivity extends AppCompatActivity {
                                 dbCustomer.setCustomer_group(customer_group);
                                 dbCustomer.setDisplay_name(display_name);
                                 dbCustomer.setPrice_list(price_list);
+                                //dbCustomer.setLatitude(latitude);
+                                //dbCustomer.setLongitude(longitude);
 
 
                                 stDatabase.stDao().addCustomer(dbCustomer);

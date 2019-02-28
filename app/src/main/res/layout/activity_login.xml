@@ -112,6 +112,13 @@
             android:layout_weight="1"
             android:onClick="deleteOrders"
             android:text="Delete Orders" />
+
+        <Button
+            android:id="@+id/bt_eggSales"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Egg Sales" />
     </LinearLayout>
 
     <LinearLayout

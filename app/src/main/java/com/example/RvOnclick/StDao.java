@@ -67,6 +67,9 @@ public interface StDao {
     @Query("select * from OrderProduct where orderId = :id")
     public List<OrderProduct> getOrderProductsById(long id);
 
+    @Query("select orderStatus from `Order` where orderId = :id")
+    int getOrderStatusByOrderId(long id);
+
     @Query("select * from Product where productDisabled = 0")
     public List<Product> getProduct();
 
@@ -82,6 +85,9 @@ public interface StDao {
     @Query("select * from Invoice where customer = :custCode")
     public List<Invoice> getInvoicesByCustomerCode(String custCode);
 
+    @Query("select * from Invoice where invoiceNumber = :invoiceNo")
+    Invoice getInvoiceByInvoiceNo(String invoiceNo);
+
     @Query("update 'Order' set appOrderId = :appOrderId where orderId = :id")
     public void updateAppOrderId(String appOrderId, Long id);
 
@@ -91,6 +97,9 @@ public interface StDao {
 
     @Query("delete from Company")
     void deleteAllCompanies();
+
+    @Query("delete from Account")
+    void deleteAllAccounts();
 
     @Query("delete from PriceList where 1")
     public void deleteAllPriceLists();
@@ -122,8 +131,14 @@ public interface StDao {
     @Query("delete from Invoice where 1")
     public void deleteAllInvoices();
 
+    @Query("delete from Payment where paymentId = :id")
+    void deletePaymentByPaymentId(Long id);
+
     @Delete
     void deleteOrderProduct(OrderProduct...orderProduct);
+
+    @Delete
+    void deletePayment(Payment...payment);
 
 
     @Query("update 'Order' set orderNumber = :orderNumber where orderId = :id")
@@ -146,6 +161,9 @@ public interface StDao {
 
     @Query("select * from Payment where paymentStatus=:paymentStatus")
     List<Payment> getPaymentByPaymentStatus(int paymentStatus);
+
+    @Query("select * from Payment where paymentId = :id")
+    Payment getPaymentByPaymentId(Long id);
 
     @Query("select * from Company where companyName=:companyName")
     Company getCompanyByName(String companyName);
@@ -204,6 +222,9 @@ public interface StDao {
     @Query("select count(*) from Product")
     int countProduct();
 
+    @Query("select count(*) from Account")
+    int countAccounts();
+
     @Query("select count(*) from Customer")
     int countCustomer();
 
@@ -218,6 +239,12 @@ public interface StDao {
 
     @Query("select * from Account where accountName = :accountName")
     Account getAccountByAccountName(String accountName);
+
+    @Query("select * from Account where name = :name")
+    Account getAccountByName(String name);
+
+    @Query("select * from Product where 1")
+    List<Product> getAllProducts();
 
 
 

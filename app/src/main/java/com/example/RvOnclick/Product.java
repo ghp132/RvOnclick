@@ -28,6 +28,15 @@ public class Product {
     private String productGroup;
     private double productRate;
     private double stock;
+    private Double currentOrderQty;
+
+    public Double getCurrentOrderQty() {
+        return currentOrderQty;
+    }
+
+    public void setCurrentOrderQty(Double currentOrderQty) {
+        this.currentOrderQty = currentOrderQty;
+    }
 
     @NonNull
     public String getProductCode() {

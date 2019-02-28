@@ -35,7 +35,7 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
     public static StDatabase stDatabase;
     protected String custCode;
-    public int orderId;
+    public int orderId, orderStatus;
     public List<Product> productList,searchableProductList;
     private ProductAdapter.OnItemClickListener listener;
     EditText productSearchBox;
@@ -163,33 +163,39 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
         //get the order id from the dialogfragment
         orderId = Integer.parseInt(data.getStringExtra("orderId"));
         getActivity().getIntent().putExtra("orderId", String.valueOf(orderId));
+
         productSearchBox.selectAll();
     }
 
 
     @Override
     public void onItemClicked(View v, int position) {
+        if (orderId == -1){
+            orderStatus = -1;
+        } else {
+            orderStatus = stDatabase.stDao().getOrderStatusByOrderId(orderId);
+        }
+        if (orderStatus == -1 ) {
+            String prodCode = productList.get(position).getProductCode();
+            double rate = productList.get(position).getProductRate();
+
+            Bundle args = new Bundle();
+            args.putString("prodCode", prodCode);
+            args.putString("custCode", custCode);
+            args.putString("orderId", String.valueOf(orderId));
+            args.putDouble("rate", rate);
 
 
-        String prodCode = productList.get(position).getProductCode();
-        double rate = productList.get(position).getProductRate();
-
-        Bundle args = new Bundle();
-        args.putString("prodCode", prodCode);
-        args.putString("custCode", custCode);
-        args.putString("orderId", String.valueOf(orderId));
-        args.putDouble("rate",rate);
+            DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();
+            df.setArguments(args);
+            df.setCancelable(false);
+            df.setTargetFragment(this, 1);
 
 
-
-
-        DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();
-        df.setArguments(args);
-        df.setCancelable(false);
-        df.setTargetFragment(this, 1);
-
-
-        df.show(getFragmentManager(), "Dialog");
+            df.show(getFragmentManager(), "Dialog");
+        } else {
+            Toast.makeText(getActivity().getApplicationContext(),"This order cannot be editted." + orderStatus,Toast.LENGTH_SHORT).show();
+        }
 
     }
 

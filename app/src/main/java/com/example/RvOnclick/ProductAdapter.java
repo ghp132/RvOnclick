@@ -1,6 +1,7 @@
 package com.example.RvOnclick;
 
 import android.content.Context;
+import android.support.annotation.ColorInt;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -23,7 +24,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
     @NonNull
     @Override
     public ProductAdapter.ProdViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View itemView = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.rv_item_product,viewGroup,false);
+        View itemView = LayoutInflater.from(viewGroup.getContext())
+                .inflate(R.layout.rv_item_product,viewGroup,false);
         return new ProdViewHolder(itemView);
     }
 
@@ -34,7 +36,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
         prodViewHolder.tvAdded.setText(String.valueOf(product.getProductRate()));
         prodViewHolder.tvCount.setText(String.valueOf(product.getStock()));
         prodViewHolder.tvOrder.setText(Boolean.toString(product.getProductDisabled()));
-
+        //prodViewHolder.itemView.setOutlineSpotShadowColor(0xff00ff00);
 
     }
 

@@ -15,6 +15,7 @@ public class OrderProductAdapter extends RecyclerView.Adapter<OrderProductAdapte
 
     public interface OnItemClickListener {
         void onItemClicked(View view, int position);
+        void onLongClick(View view, int position);
     }
 
     private OnItemClickListener listener;
@@ -70,6 +71,13 @@ public class OrderProductAdapter extends RecyclerView.Adapter<OrderProductAdapte
                 @Override
                 public void onClick(View v) {
                     listener.onItemClicked(v, getAdapterPosition());
+                }
+            });
+            itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    listener.onLongClick(v,getAdapterPosition());
+                    return true;
                 }
             });
         }
