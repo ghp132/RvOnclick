@@ -86,7 +86,7 @@
             android:ems="10"
             android:hint="Eggs"
             android:inputType="number"
-            
+
             app:layout_constraintTop_toBottomOf="@+id/et_trays" />
     </android.support.constraint.ConstraintLayout>
 
