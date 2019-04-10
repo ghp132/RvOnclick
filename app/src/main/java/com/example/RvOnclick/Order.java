@@ -19,6 +19,25 @@ public class Order {
     // 2 submitted
     private String appOrderId;
     private String orderNumber;
+    private String priceListName;
+
+    public String getTerritory() {
+        return territory;
+    }
+
+    public void setTerritory(String territory) {
+        this.territory = territory;
+    }
+
+    private String territory;
+
+    public String getPriceListName() {
+        return priceListName;
+    }
+
+    public void setPriceListName(String priceListName) {
+        this.priceListName = priceListName;
+    }
 
     public String getCompanyName() {
         return companyName;

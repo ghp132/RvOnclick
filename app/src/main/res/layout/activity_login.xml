@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="http://178.128.195.103:80" />
+        android:text="http://178.128.195.103:83" />
 
     <EditText
         android:id="@+id/tv_loginEmail"
@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="administrator" />
+        android:text="velu@gmail.com" />
 
     <EditText
         android:id="@+id/tv_loginPassword"
@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPassword"
-        android:text="admin" />
+        android:text="velu" />
 
     <ProgressBar
         android:id="@+id/pbHeaderProgress"

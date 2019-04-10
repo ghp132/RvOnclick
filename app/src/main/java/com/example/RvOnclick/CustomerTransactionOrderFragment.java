@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,8 +20,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static android.content.ContentValues.TAG;
 
 
 /**
@@ -42,11 +39,9 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     private int orderStatus;
 
 
-
     public CustomerTransactionOrderFragment() {
         // Required empty public constructor
     }
-
 
 
     @Override
@@ -57,23 +52,22 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
 
         custCode = getArguments().getString("custCode");
         Log.d("TransactionActivity", "onCreateView: ");
-        tvOrderInfo=view.findViewById(R.id.tv_customerOrderInfo);
+        tvOrderInfo = view.findViewById(R.id.tv_customerOrderInfo);
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
         orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
         tvOrderInfo.setText(String.valueOf(orderTotalValue));
 
-        try{
-            try{
+        try {
+            try {
 
                 orderId = Long.parseLong(getActivity().getIntent().getStringExtra("orderId"));
                 //Toast.makeText(getActivity().getApplicationContext(),orderId.toString(),Toast.LENGTH_SHORT).show();
-            } catch (NumberFormatException ee){
+            } catch (NumberFormatException ee) {
                 orderId = Long.parseLong(String.valueOf(-1));
             }
-        }
-        catch (NullPointerException e){
+        } catch (NullPointerException e) {
 
             int temp = -1;
             //Toast.makeText(getActivity().getApplicationContext(),orderId.toString(),Toast.LENGTH_SHORT).show();
@@ -81,8 +75,7 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
         }
 
 
-
-        if (orderId != -1 && orderId != null){
+        if (orderId != -1 && orderId != null) {
             orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
             productList = stDatabase.stDao().getOrderProductsById(orderId);
             orderStatus = stDatabase.stDao().getOrderStatusByOrderId(orderId);
@@ -136,14 +129,14 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
             df.show(getFragmentManager(), "Dialog");
             setUserVisibleHint(false);
         } else {
-            Toast.makeText(getActivity().getApplicationContext(),"This order cannot be editted.",Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity().getApplicationContext(), "This order cannot be editted.", Toast.LENGTH_SHORT).show();
         }
 
     }
 
     @Override
     public void onLongClick(View view, final int position) {
-       // Toast.makeText(getActivity(),"clicked at position" + position,Toast.LENGTH_SHORT).show();
+        // Toast.makeText(getActivity(),"clicked at position" + position,Toast.LENGTH_SHORT).show();
 
         AlertDialog.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -156,14 +149,14 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // continue with delete
-                        if (stDatabase.stDao().countOrderProduct(orderId)>1){
+                        if (stDatabase.stDao().countOrderProduct(orderId) > 1) {
                             stDatabase.stDao().deleteOrderProduct(productList.get(position));
                             updateProductAdapterfromDB();
-                        } else if (stDatabase.stDao().countOrderProduct(orderId)==1){
+                        } else if (stDatabase.stDao().countOrderProduct(orderId) == 1) {
                             stDatabase.stDao().deleteOrderProduct(productList.get(position));
                             stDatabase.stDao().deleteOrderByOrderId(orderId);
                             orderId = Long.valueOf(-1);
-                            getActivity().getIntent().putExtra("orderId",orderId);
+                            getActivity().getIntent().putExtra("orderId", orderId);
                             productList.clear();
                             productAdapter.notifyDataSetChanged();
                             getActivity().finish();
@@ -182,14 +175,14 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     }
 
     @Override
-    public void setUserVisibleHint(boolean isVisibleToUser){
+    public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
-        if (isVisibleToUser){
+        if (isVisibleToUser) {
             getFragmentManager().beginTransaction().detach(this).attach(this).commit();
         }
     }
 
-    private void updateProductAdapterfromDB(){
+    private void updateProductAdapterfromDB() {
         productList.clear();
         productList.addAll(stDatabase.stDao().getOrderProductsById(orderId));
         productAdapter.notifyDataSetChanged();

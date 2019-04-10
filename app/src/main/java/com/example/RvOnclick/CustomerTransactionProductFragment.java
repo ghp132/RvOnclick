@@ -2,8 +2,6 @@ package com.example.RvOnclick;
 
 
 import android.arch.persistence.room.Room;
-import android.arch.persistence.room.RoomDatabase;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -16,9 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -36,7 +32,7 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
     public static StDatabase stDatabase;
     protected String custCode;
     public int orderId, orderStatus;
-    public List<Product> productList,searchableProductList;
+    public List<Product> productList, searchableProductList;
     private ProductAdapter.OnItemClickListener listener;
     EditText productSearchBox;
     public static String TAG = "CustomerTransactionFragment";
@@ -55,9 +51,9 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
         //Toast.makeText(getActivity().getApplicationContext(),getActivity().getIntent().getStringExtra("orderId"),Toast.LENGTH_SHORT).show();
         custCode = getArguments().getString("custCode");
-        if (getArguments().getString("orderId")!=null) {
+        if (getArguments().getString("orderId") != null) {
             orderId = Integer.parseInt(getArguments().getString("orderId"));
-        } else if(getActivity().getIntent().getStringExtra("orderId")!=null) {
+        } else if (getActivity().getIntent().getStringExtra("orderId") != null) {
             orderId = Integer.parseInt(getActivity().getIntent().getStringExtra("orderId"));
         } else {
             orderId = -1; //order id to be set -1 for the first item of the order => order is created only
@@ -75,12 +71,26 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
         //ac.makeShortToast(getActivity(),"went through this " + priceList);
 
         List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
-        if (priceList!=null) {
+        getActivity().getIntent().putExtra("priceList","Standard Selling");
+        if (priceList != null) {
+            getActivity().getIntent().putExtra("priceList",customer.getPrice_list());
+            getActivity().getIntent().putExtra("territory",customer.getTerritory());
 
-            for (Price p : prices){
-               // Log.d(TAG, "price:" + p.getProductCode() + "|" + p.getPrice());
+
+            for (Product product : productList) {
+                //setting the price of all items to 0 before updating prices from price list
+                product.setProductRate(0);
+                stDatabase.stDao().updateProduct(product);
+                int indexOfProduct = productList.indexOf(product);
+                productList.set(indexOfProduct, product);
+
+            }
+
+
+            for (Price p : prices) {
+                //updating prices of all items from the customer price list
                 String prodCodeFromPrices = p.getProductCode();
-                for (Product product : productList){
+                for (Product product : productList) {
                     String prodCode = product.getProductCode();
                     Log.d(TAG, "onCreateView: prodCode");
                     if (prodCodeFromPrices.equals(prodCode)) {
@@ -93,8 +103,8 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                     }
                 }
             }
-        }
 
+        }
 
 
         final RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
@@ -111,9 +121,6 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
         productAdapter.notifyDataSetChanged();
 
 
-
-
-
         productSearchBox.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -126,9 +133,9 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                 // fires up when there is any change in the search text box
                 List<Product> filtered = new ArrayList<>();
                 searchableProductList = stDatabase.stDao().getProduct();
-                for (Product product : searchableProductList){
+                for (Product product : searchableProductList) {
                     String searchString = product.getProductName().toLowerCase();
-                    if(searchString.contains(productSearchBox.getText().toString().toLowerCase()) ){
+                    if (searchString.contains(productSearchBox.getText().toString().toLowerCase())) {
                         filtered.add(product);
                     }
                 }
@@ -137,8 +144,6 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                 final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
                 recyclerView.setAdapter(productAdapter);
                 productAdapter.notifyDataSetChanged();
-
-
 
 
             }
@@ -154,9 +159,6 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
     }
 
 
-
-
-
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -170,12 +172,12 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
     @Override
     public void onItemClicked(View v, int position) {
-        if (orderId == -1){
+        if (orderId == -1) {
             orderStatus = -1;
         } else {
             orderStatus = stDatabase.stDao().getOrderStatusByOrderId(orderId);
         }
-        if (orderStatus == -1 ) {
+        if (orderStatus == -1) {
             String prodCode = productList.get(position).getProductCode();
             double rate = productList.get(position).getProductRate();
 
@@ -194,12 +196,12 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
 
             df.show(getFragmentManager(), "Dialog");
         } else {
-            Toast.makeText(getActivity().getApplicationContext(),"This order cannot be editted." + orderStatus,Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity().getApplicationContext(), "This order cannot be editted." + orderStatus, Toast.LENGTH_SHORT).show();
         }
 
     }
 
-    private List<Product> sortProductList(List<Product> sortList){
+    private List<Product> sortProductList(List<Product> sortList) {
         //sorts the list
         Collections.sort(sortList, new Comparator<Product>() {
             @Override

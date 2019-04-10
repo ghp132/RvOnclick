@@ -34,7 +34,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     Button btProductSave, btIncrease, btDecrease, btCancel;
     EditText etQty, etRate;
     public static StDatabase stDatabase;
-    public String custCode;
+    public String custCode, priceListName, territory;
     public long orderId;
 
     public DialogFragment_ProductRateInfo() {
@@ -45,9 +45,13 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        Intent intent = getActivity().getIntent();
         final String prodCode = getArguments().getString("prodCode");
         orderId = Long.parseLong(getArguments().getString("orderId"));
         custCode = getArguments().getString("custCode");
+        priceListName = intent.getStringExtra("priceList");
+        territory = intent.getStringExtra("territory");
+
 
         ApplicationController ac = new ApplicationController();
 
@@ -154,6 +158,8 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         if (orderId == -1) {
             Order order = new Order();
             order.setCustomerCode(custCode);
+            order.setPriceListName(priceListName);
+            order.setTerritory(territory);
             order.setOrderStatus(-1);
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyymmddhhmmss");
             String ts = simpleDateFormat.format(new Date());

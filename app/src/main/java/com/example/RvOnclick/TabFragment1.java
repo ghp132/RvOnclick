@@ -54,14 +54,6 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
     public CustomerAdapter customerAdapter;
     private String TAG  = "TabFragment1";
 
-    //-----------------------------------------------------------------------------------------------
-
-    //private LocationRequest mLocationRequest;
-
-    //private long UPDATE_INTERVAL = 10 * 1000;  /* 10 secs */
-    //private long FASTEST_INTERVAL = 2000; /* 2 sec */
-
-    //---------------------------------------------------------------------------------------------------------
 
 
     public static List<Customer> customerList, searchableList;
@@ -90,32 +82,6 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
             Log.d(TAG, "onCreateView: " + cust.getDisplay_name() + "\n");
         }
 
-
-        //----------------------------------------------------------------------------------------------
-
-        //startLocationUpdates();
-        //----------------------------------------------------------------------------------------------
-
-        /*fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity().getApplicationContext());
-        int PERMISSION_REQUEST_FINE_LOCATION = 1;
-        if (ContextCompat.checkSelfPermission(getActivity(),
-                Manifest.permission.ACCESS_FINE_LOCATION )!=PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(getActivity(),
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},PERMISSION_REQUEST_FINE_LOCATION);
-        } else {
-            fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-                @Override
-                public void onSuccess(Location location) {
-                    //Got location
-                    applicationController.filterCustomersByProximity(customerList,location);
-
-                    if (location != null) {
-                        //did not get location
-                    }
-                }
-
-            });
-        }*/
 
 
         etCustomerSearch = view.findViewById(R.id.et_searchCustomerList);

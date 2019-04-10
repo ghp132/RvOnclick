@@ -73,7 +73,8 @@ public class LoginActivity extends AppCompatActivity {
         //final String company = "Hari Enterprises";
         tvUrl = findViewById(R.id.tv_url);
         stDatabase = Room.databaseBuilder(getApplicationContext(), StDatabase.class, "StDB")
-                .allowMainThreadQueries().build();
+                .allowMainThreadQueries().fallbackToDestructiveMigration().build();
+
 
 
         CookieManager manager = new CookieManager();
@@ -475,6 +476,8 @@ public class LoginActivity extends AppCompatActivity {
             info = info + "\n\n";
             String appOrderId = order.getAppOrderId();
             final Long orderId = order.getOrderId();
+            String priceListName = order.getPriceListName();
+            String territory = order.getTerritory();
             info = info + orderId;
             String custCode = order.getCustomerCode();
             info = info + "\n" + custCode;
@@ -505,6 +508,8 @@ public class LoginActivity extends AppCompatActivity {
             try {
                 //params.put("delivery_date", deliveryDate);
                 params.put("customer", custCode);
+                params.put("territory",territory);
+                params.put("selling_price_list",priceListName);
                 params.put("items", jsonArray);
                 params.put("app_invoice_id", appOrderId);
 

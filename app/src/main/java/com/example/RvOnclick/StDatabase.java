@@ -5,10 +5,11 @@ import android.arch.persistence.room.RoomDatabase;
 
 @Database(entities = {Product.class,Customer.class,Order.class,
         OrderProduct.class,Invoice.class,Payment.class,
-        PriceList.class,Account.class,Price.class,TblSettings.class,Company.class},version = 4)
+        PriceList.class,Account.class,Price.class,TblSettings.class,Company.class},version = 5)
 public abstract class StDatabase extends RoomDatabase {
 
     public abstract StDao stDao();
+
 
 
 }
