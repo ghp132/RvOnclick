@@ -17,7 +17,8 @@
         android:layout_marginTop="0dp"
         android:ems="10"
         android:hint="Search Here"
-        android:inputType="textPersonName" />
+        android:inputType="textPersonName"
+        android:selectAllOnFocus="true"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recyclerview"

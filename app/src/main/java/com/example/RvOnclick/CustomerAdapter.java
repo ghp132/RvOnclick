@@ -32,7 +32,7 @@ public class CustomerAdapter extends RecyclerView.Adapter<CustomerAdapter.CustVi
         Customer customer = customerList.get(i);
         String customerName;
         if (customer.getDisplay_name()==null){
-            customerName = customer.getCustomer_name();
+            customerName = customer.getCustomer_id();
         } else {
             customerName=customer.getDisplay_name();
         }

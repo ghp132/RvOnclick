@@ -20,7 +20,10 @@ public interface StDao {
     public long createOrder (Order order);
 
     @Insert
-    public void addProductToOrder(OrderProduct orderProduct);
+    public long addProductToOrder(OrderProduct orderProduct);
+
+    @Query("select * from OrderProduct where orderProductId=:id")
+    OrderProduct getOrderProdutByOrderProductId(long id);
 
     @Insert
     public Long createInvoice (Invoice invoice);
@@ -49,6 +52,9 @@ public interface StDao {
     @Query("select * from Company where companyName = :companyName")
     Company getCompanyByCompanyName(String companyName);
 
+    @Query("select abbr from Company where companyName = :companyName")
+    String getAbbrByCompanyName(String companyName);
+
     @Query("select * from TblSettings")
     public List<TblSettings> getAllSettings();
 
@@ -76,14 +82,20 @@ public interface StDao {
     @Query("select * from Customer where customer_disabled = 0")
     public List<Customer> getCustomer();
 
+    @Query("select mobileNo from Customer where customer_id=:custCode")
+    String getMobileNoByCustomer(String custCode);
+
     @Query("update OrderProduct set qty = :qty, rate = :rate where orderProductId = :id")
     public int updateOrderProductById(double qty, double rate, int id);
 
     @Query("select * from Customer where customer_id = :custCode")
-    public Customer getCustomerbyCustomerCode(String custCode);
+    Customer getCustomerbyCustomerCode(String custCode);
 
     @Query("select * from Invoice where customer = :custCode")
     public List<Invoice> getInvoicesByCustomerCode(String custCode);
+
+    @Query("select * from Invoice where customer = :custCode AND outstanding!=0")
+    List<Invoice> getOutstandingInvoicesByCustomerCode(String custCode);
 
     @Query("select * from Invoice where invoiceNumber = :invoiceNo")
     Invoice getInvoiceByInvoiceNo(String invoiceNo);
@@ -213,6 +225,12 @@ public interface StDao {
     @Query("select count(*) from Company")
     int countCompany();
 
+    @Query("update Product set productRate = 0 where 1")
+    void resetProductRate();
+
+    @Query("update Product set currentOrderQty = 0 AND currentOrderFreeQty=0")
+    void resetCurrentOrderQty();
+
     @Query("select count(*) from PriceList")
     int countPriceList();
 
@@ -246,7 +264,35 @@ public interface StDao {
     @Query("select * from Product where 1")
     List<Product> getAllProducts();
 
+    @Insert
+    void addUserConfig(UserConfig userConfig);
 
+    @Update
+    void updateUserConfig(UserConfig...userConfigs);
+
+    @Query("select * from UserConfig")
+    List<UserConfig> getAllUserConfig();
+
+    @Query("select count(*) from UserConfig")
+    int countUserConfig();
+
+    @Query("Delete from UserConfig")
+    void deleteAllUserConfig();
+
+    @Query("select sendSms from UserConfig where userId=:userId")
+    int getSendSmsConfig(String userId);
+
+    @Insert
+    long addUser(User user);
+
+    @Query("select count(*) from User")
+    int countUsers();
+
+    @Query("delete from User")
+    void deleteAllUsers();
+
+    @Query("select * from User where emailId = :email")
+    User getUserByEmailId(String email);
 
 
 }

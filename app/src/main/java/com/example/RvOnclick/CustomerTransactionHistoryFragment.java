@@ -44,7 +44,7 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
-        invoiceList = stDatabase.stDao().getInvoicesByCustomerCode(custCode);
+        invoiceList = stDatabase.stDao().getOutstandingInvoicesByCustomerCode(custCode);
 
         if (invoiceList.isEmpty()) {
             return view;

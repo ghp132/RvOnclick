@@ -19,6 +19,15 @@ public class Customer {
     private String price_list;
     private Double latitude;
     private Double longitude;
+    private String mobileNo;
+
+    public String getMobileNo() {
+        return mobileNo;
+    }
+
+    public void setMobileNo(String mobileNo) {
+        this.mobileNo = mobileNo;
+    }
 
     public Double getLatitude() {
         return latitude;

@@ -14,6 +14,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,8 @@ public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickList
 
         for (Payment payment : paymnents) {
             Rv1Item item = new Rv1Item();
+            String cCode = payment.getCustomerCode();
+            Customer c = stDatabase.stDao().getCustomerbyCustomerCode(cCode);
             String customerName = stDatabase.stDao().getCustomerbyCustomerCode(payment.getCustomerCode()).getCustomer_name();
             item.setHeading(customerName);
             item.setInfo2(payment.getInvoiceNo());
@@ -86,6 +89,7 @@ public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickList
         final Payment payment = stDatabase.stDao()
                 .getPaymentByPaymentId(Long.valueOf(rv1ItemList.get(position).getIntId()));
         Double paidAmt = payment.getPaymentAmt();
+
         Double outStanding = stDatabase.stDao().getInvoiceByInvoiceNo(payment.getInvoiceNo()).getOutstanding();
         String custCode = payment.getCustomerCode();
         String invoiceNo = rv1ItemList.get(position).getInfo2();
@@ -147,4 +151,6 @@ public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickList
         adapter.notifyDataSetChanged();
 
     }
+
+
 }

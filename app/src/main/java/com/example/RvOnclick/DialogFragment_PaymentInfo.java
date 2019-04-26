@@ -10,6 +10,9 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.RecyclerView;
+import android.telephony.SmsManager;
+import android.telephony.SubscriptionManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,11 +24,14 @@ import android.widget.CompoundButton;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+
+import static com.example.RvOnclick.CustomerTransactionProductFragment.TAG;
 
 
 /**
@@ -45,6 +51,9 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
     Integer mYear, mMonth, mDay;
     Long paymentId, oldPaymentid;
     Boolean previouslyPaid;
+    ApplicationController ac = new ApplicationController();
+    int smsPermissionGranted;
+    String uniquePaymentId;
 
 
     public DialogFragment_PaymentInfo() {
@@ -177,6 +186,8 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                             stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
 
                             getTargetFragment().onActivityResult(getTargetRequestCode(), 1, getActivity().getIntent());
+
+                            //checkForSmsPermission();
                             getDialog().dismiss();
 
                         }
@@ -197,13 +208,28 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                         }
 
                         //creating and updating unique payment id
+
                         stDatabase.stDao().updateAppPaymentId(CreateUniqueAppPaymentId(paymentId), paymentId);
 
                         getTargetFragment().onActivityResult(getTargetRequestCode(), 1, getActivity().getIntent());
 
+
+                            checkForSmsPermission();
+
                         getDialog().dismiss();
                     }
                 }
+
+                /*if (stDatabase.stDao().getAllUserConfig().get(0).getSendSms()==1){
+                    smsPermissionGranted = ac.checkForSmsPermission(getActivity(),1);
+                    if (smsPermissionGranted==0){
+                        //Toast.makeText(getActivity(), "SMS Permission Denied", Toast.LENGTH_SHORT).show();
+                    } else {
+                        sendSms();
+
+
+                    }
+                }*/
 
 
             }
@@ -257,4 +283,36 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         return uniqueAppPaymentId;
 
     }
+
+    private void createSmsContent() {
+        SmsManager smsManager = SmsManager.getDefault();
+        String mobileNo = stDatabase.stDao().getMobileNoByCustomer(custCode);
+        getActivity().getIntent().putExtra("mobileNo",mobileNo);
+
+        String smsContent = "Received Rs." + paymentAmt.toString() + " against bill no.:"
+                + invoiceNo + ". Subject to verification.";
+        getActivity().getIntent().putExtra("smsContent",smsContent);
+        //smsManager.sendTextMessage(mobileNo,null,smsContent,null,null);
+        Log.d(TAG, "createSmsContent: Prepared");
+        //Toast.makeText(getActivity(), "SMS Content Prepared", Toast.LENGTH_SHORT).show();
+    }
+
+    private void checkForSmsPermission(){
+        if (stDatabase.stDao().getAllUserConfig().get(0).getSendSms()==1){
+            createSmsContent();
+            smsPermissionGranted = ac.checkForSmsPermission(getActivity(),1);
+            if (smsPermissionGranted==0){
+                //Toast.makeText(getActivity(), "SMS Permission Denied", Toast.LENGTH_SHORT).show();
+            } else {
+                String mobileNo = getActivity().getIntent().getStringExtra("mobileNo");
+                String smsContent = getActivity().getIntent().getStringExtra("smsContent");
+                if (mobileNo!=null) {
+                    ac.sendSms(mobileNo, smsContent, getActivity());
+                }
+            }
+        }
+
+    }
+
+
 }

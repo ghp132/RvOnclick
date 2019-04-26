@@ -29,6 +29,15 @@ public class Product {
     private double productRate;
     private double stock;
     private Double currentOrderQty;
+    private double currentOrderFreeQty;
+
+    public double getCurrentOrderFreeQty() {
+        return currentOrderFreeQty;
+    }
+
+    public void setCurrentOrderFreeQty(double currentOrderFreeQty) {
+        this.currentOrderFreeQty = currentOrderFreeQty;
+    }
 
     public Double getCurrentOrderQty() {
         return currentOrderQty;

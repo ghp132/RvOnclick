@@ -78,10 +78,6 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
                 .allowMainThreadQueries().build();
 
         customerList = stDatabase.stDao().getEnabledCustomers(false);
-        for(Customer cust : customerList){
-            Log.d(TAG, "onCreateView: " + cust.getDisplay_name() + "\n");
-        }
-
 
 
         etCustomerSearch = view.findViewById(R.id.et_searchCustomerList);
@@ -113,9 +109,9 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
                 for (Customer customer : searchableList) {
                     String searchString;
                     if (customer.getDisplay_name() == null) {
-                        searchString = customer.getCustomer_name().toLowerCase();
+                        searchString = customer.getCustomer_id().toLowerCase();
                     } else {
-                        searchString = customer.getDisplay_name().toLowerCase();
+                        searchString = customer.getCustomer_id().toLowerCase();
                     }
                     String searchedString = etCustomerSearch.getText().toString().toLowerCase();
                     if (searchString.contains(searchedString)) {
@@ -139,115 +135,7 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
 
         return view;
     }
-/*
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == 1) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                //permission granted
-            } else {
-                applicationController.makeShortToast(getActivity().getApplicationContext(), "Permission Denied!");
-                applicationController.checkConfigExistence("useLocationFilter", "0", stDatabase);
-            }
-        }
-    }
 
-
-
-
-    // Trigger new location updates at interval
-    protected void startLocationUpdates() {
-
-        // Create the location request to start receiving updates
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
-
-        // Create LocationSettingsRequest object using location request
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        LocationSettingsRequest locationSettingsRequest = builder.build();
-
-        // Check whether location settings are satisfied
-        // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
-        SettingsClient settingsClient = LocationServices.getSettingsClient(getActivity());
-        settingsClient.checkLocationSettings(locationSettingsRequest);
-
-        // new Google API SDK v11 uses getFusedLocationProviderClient(this)
-
-        int PERMISSION_REQUEST_FINE_LOCATION = 1;
-        if (ContextCompat.checkSelfPermission(getActivity(),
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(),
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_FINE_LOCATION);
-        } else {
-            LocationServices.getFusedLocationProviderClient(getActivity()).requestLocationUpdates(mLocationRequest, new LocationCallback() {
-                        @Override
-                        public void onLocationResult(LocationResult locationResult) {
-                            // do work here
-                            applicationController.makeShortToast(getActivity(),"onActivityResul");
-                            onLocationChanged(locationResult.getLastLocation());
-                            Location location = locationResult.getLastLocation();
-                            applicationController.makeShortToast(getActivity(),"onLocationChanged: Lat: "+ location.getLatitude()
-                                    + "Long: " + location.getLongitude());
-                            customerList = stDatabase.stDao().getEnabledCustomers(false);
-
-                            customerList = applicationController.filterCustomersByProximity(customerList,location);
-                            customerList = applicationController.sortCustomerList(customerList);
-                            customerAdapter.notifyDataSetChanged();
-                        }
-                    },
-                    Looper.myLooper());
-        }
-    }*/
-
-
-    //public void onLocationChanged(Location location) {
-        // New location has now been determined
-        /*applicationController.makeShortToast(getActivity(),"onLocationChanged: Lat: "+ location.getLatitude()
-        + "Long: " + location.getLongitude());
-        customerList = stDatabase.stDao().getEnabledCustomers(false);
-
-        customerList = applicationController.filterCustomersByProximity(customerList,location);
-        customerList = applicationController.sortCustomerList(customerList);
-        customerAdapter.notifyDataSetChanged();*/
-
-        //String msg = "Updated Location: " +
-         //       Double.toString(location.getLatitude()) + "," +
-           //     Double.toString(location.getLongitude());
-        //Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-        // You can now create a LatLng Object for use with maps
-        //LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());*/
-    //}
-
-/*
-    public void getLastLocation() {
-        // Get last known recent location using new Google Play Services SDK (v11+)
-        FusedLocationProviderClient locationClient = LocationServices.getFusedLocationProviderClient(getActivity().getApplicationContext());
-        int PERMISSION_REQUEST_FINE_LOCATION = 1;
-        if (ContextCompat.checkSelfPermission(getActivity(),
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(),
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_FINE_LOCATION);
-        } else {
-            locationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-                @Override
-                public void onSuccess(Location location) {
-                    // GPS location can be null if GPS is switched off
-                    if (location != null) {
-                        onLocationChanged(location);
-                    }
-                }
-            }).addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Log.d("MapDemoActivity", "Error trying to get last GPS location");
-                    e.printStackTrace();
-                }
-            });
-        }
-    }*/
 
 
     @Override
@@ -267,5 +155,10 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
         getActivity().startActivity(intent);
     }
 
-
+    @Override
+    public void onResume(){
+        etCustomerSearch.selectAll();
+        applicationController.showKeyboard(etCustomerSearch,getActivity());
+        super.onResume();
+    }
 }

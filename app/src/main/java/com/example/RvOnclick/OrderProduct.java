@@ -8,12 +8,36 @@ import android.support.annotation.NonNull;
 public class OrderProduct{
     @PrimaryKey(autoGenerate = true)
     @NonNull
-    private int orderProductId;
-    private int orderId;
+    private long orderProductId;
+    private long orderId, parentId, childId;
     private String productCode;
     private double qty;
     private String companyName;
-    private double rate;
+    private double rate, discountPercentage;
+
+    public double getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(double discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
+    public long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(long parentId) {
+        this.parentId = parentId;
+    }
+
+    public long getChildId() {
+        return childId;
+    }
+
+    public void setChildId(long childId) {
+        this.childId = childId;
+    }
 
     public double getRate() {
         return rate;
@@ -24,19 +48,19 @@ public class OrderProduct{
     }
 
     @NonNull
-    public int getOrderProductId() {
+    public long getOrderProductId() {
         return orderProductId;
     }
 
-    public void setOrderProductId(@NonNull int orderProductId) {
+    public void setOrderProductId(@NonNull long orderProductId) {
         this.orderProductId = orderProductId;
     }
 
-    public int getOrderId() {
+    public long getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(int orderId) {
+    public void setOrderId(long orderId) {
         this.orderId = orderId;
     }
 

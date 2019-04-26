@@ -5,4 +5,5 @@
     <color name="colorAccent">#D81B60</color>
     <color name="brand">#999999</color>
     <color name="productName">#222222</color>
+    <color name="progressBarBg">#80FFFFFF</color>
 </resources>

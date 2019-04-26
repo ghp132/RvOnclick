@@ -37,6 +37,7 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     OrderProductAdapter productAdapter;
     TextView tvOrderInfo;
     private int orderStatus;
+    ApplicationController ac = new ApplicationController();
 
 
     public CustomerTransactionOrderFragment() {
@@ -109,8 +110,28 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
 
         if (orderStatus == -1) {
             String prodCode = productList.get(position).getProductCode();
+            OrderProduct orderProduct = productList.get(position);
+            double freeQty = 0;
+            long parentId = orderProduct.getParentId();
+            long childId = orderProduct.getChildId();
+            if (childId!=0) {
+                for (OrderProduct prod : productList) {
+                    if(prod.getOrderProductId()==orderProduct.getChildId()){
+                        freeQty=prod.getQty();
+                    }
+                }
+            }
             Double qty = productList.get(position).getQty();
             Double rate = productList.get(position).getRate();
+
+            if (parentId!=0){
+                for (OrderProduct prod : productList) {
+                    if(prod.getOrderProductId()==orderProduct.getParentId()){
+                        qty=prod.getQty();
+                        freeQty = orderProduct.getQty();
+                    }
+                }
+            }
 
             // data passed to product rate info dialog fragment
             Bundle args = new Bundle();
@@ -118,6 +139,7 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
             args.putString("custCode", custCode);
             args.putString("orderId", String.valueOf(orderId));
             args.putDouble("qty", qty);
+            args.putDouble("freeQty",freeQty);
             args.putDouble("rate", rate);
 
 
@@ -149,11 +171,23 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // continue with delete
-                        if (stDatabase.stDao().countOrderProduct(orderId) > 1) {
+                        /*if (stDatabase.stDao().countOrderProduct(orderId) > 1) {
                             stDatabase.stDao().deleteOrderProduct(productList.get(position));
                             updateProductAdapterfromDB();
                         } else if (stDatabase.stDao().countOrderProduct(orderId) == 1) {
                             stDatabase.stDao().deleteOrderProduct(productList.get(position));
+                            stDatabase.stDao().deleteOrderByOrderId(orderId);
+                            orderId = Long.valueOf(-1);
+                            getActivity().getIntent().putExtra("orderId", orderId);
+                            productList.clear();
+                            productAdapter.notifyDataSetChanged();
+                            getActivity().finish();
+                        }*/
+
+                        ac.deleteOrderProduct(productList.get(position).getOrderProductId(),stDatabase);
+                        int countOfOrderProduct = stDatabase.stDao().countOrderProduct(orderId);
+                        updateProductAdapterfromDB();
+                        if (countOfOrderProduct==0){
                             stDatabase.stDao().deleteOrderByOrderId(orderId);
                             orderId = Long.valueOf(-1);
                             getActivity().getIntent().putExtra("orderId", orderId);

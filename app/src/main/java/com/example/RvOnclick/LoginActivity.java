@@ -4,13 +4,18 @@ import android.app.ProgressDialog;
 import android.arch.persistence.room.Room;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.Telephony;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,15 +31,16 @@ import com.opencsv.CSVReader;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,12 +49,15 @@ import java.util.Map;
 public class LoginActivity extends AppCompatActivity {
     EditText tvLoginEmail, tvLoginPassword, tvUrl;
     Button btLogin, btGetData, btNextActivity, btPostOrders, btPostPayments,
-            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig,btEggSales;
+            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig, btEggSales;
     String loginEmail, loginPassword, loginUrl, siteUrl;
     public static StDatabase stDatabase;
     public boolean newData;
     ApplicationController ac = new ApplicationController();
     private String TAG = "LoginActivity";
+    FrameLayout pbLl;
+    int requestCounter, responseCounter;
+    TextView tvResponseDisplay;
 
 
     @Override
@@ -67,7 +76,10 @@ public class LoginActivity extends AppCompatActivity {
         btUpdateUnknownOrders = findViewById(R.id.bt_updateOrderStatus);
         btConfig = findViewById(R.id.bt_config);
         btEggSales = findViewById(R.id.bt_eggSales);
+        pbLl = findViewById(R.id.linlaProgressBar);
         newData = false;
+        tvResponseDisplay = findViewById(R.id.tv_responseDisplay);
+
 
         //final String companyAbbreviation = "HE";
         //final String company = "Hari Enterprises";
@@ -76,56 +88,60 @@ public class LoginActivity extends AppCompatActivity {
                 .allowMainThreadQueries().fallbackToDestructiveMigration().build();
 
 
-
         CookieManager manager = new CookieManager();
         CookieHandler.setDefault(manager);
         final CookieStore cookieStore = manager.getCookieStore();
 
-        String str1;
-        TblSettings st = stDatabase.stDao().getConfigByName("loginEmail");
-        if (st != null) {
-            str1 = st.getSvalues();
-            if (str1 != null) {
-                loginEmail = str1;
-                tvLoginEmail.setText(loginEmail);
-            }
+        if (stDatabase.stDao().countUserConfig() >= 1) {
+            fillLoginInfo();
         }
-
-        st = stDatabase.stDao().getConfigByName("loginPassword");
-        if (st != null) {
-            str1 = st.getSvalues();
-            if (str1 != null) {
-                loginPassword = str1;
-                tvLoginPassword.setText(loginPassword);
-            }
-        }
-
-        st = stDatabase.stDao().getConfigByName("loginUrl");
-        if (st != null) {
-            str1 = st.getSvalues();
-            if (str1 != null) {
-                loginUrl = str1;
-                tvUrl.setText(loginUrl);
-            }
-        }
-
 
         loginEmail = tvLoginEmail.getText().toString();
         loginPassword = tvLoginPassword.getText().toString();
         loginUrl = tvUrl.getText().toString();
+        int sendSmsFromMobile = stDatabase.stDao().getSendSmsConfig(loginEmail);
+        if (sendSmsFromMobile == 1) {
+            ac.checkForSmsPermission(this, 1);
+        }
 
-        final Intent eggSalesIntent = new Intent(this,EggSalesActivity.class);
+        //SmsManager smsManager = SmsManager.getDefault();
+        //smsManager.sendTextMessage("9092747505",null,"This is a test msg",null,null);
+
+        //final Intent eggSalesIntent = new Intent(this, EggSalesActivity.class);
         btEggSales.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(eggSalesIntent);
+
+                List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
+                String info = "";
+                for (UserConfig uc : userConfigList) {
+                    info = info + uc.getFullName() + "\n" + uc.getSendSms() + "\n\n";
+
+                }
+                tvResponseDisplay.setText(info);
             }
         });
 
         btLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                requestCounter = 2;
+                responseCounter = 0;
+                pbLl.setVisibility(View.VISIBLE);
+                final List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
+                boolean userConfigPresent = false;
+                loginEmail = tvLoginEmail.getText().toString();
+                loginPassword = tvLoginPassword.getText().toString();
+                loginUrl = tvUrl.getText().toString();
+                saveLoginInfo();
+
                 login(getApplicationContext());
+                if (stDatabase.stDao().countUsers() != 0) {
+                    stDatabase.stDao().deleteAllUsers();
+                }
+                getUserConfig(getApplicationContext());
+
+
             }
         });
 
@@ -145,8 +161,11 @@ public class LoginActivity extends AppCompatActivity {
         btUpdateUnknownPayments.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                requestCounter = 2;
+                responseCounter = 0;
+                pbLl.setVisibility(View.VISIBLE);
                 updateUnknownPaymentStatuses(loginUrl, getApplicationContext());
-                updateUnknownOrderStatuses(loginUrl,getApplicationContext());
+                updateUnknownOrderStatuses(loginUrl, getApplicationContext());
             }
         });
 
@@ -166,8 +185,10 @@ public class LoginActivity extends AppCompatActivity {
         btPostOrders.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                requestCounter = 1;
+                responseCounter = 0;
+                pbLl.setVisibility(View.VISIBLE);
                 postOrders(getApplicationContext());
-                postPayments(getApplicationContext());
             }
         });
 
@@ -176,110 +197,11 @@ public class LoginActivity extends AppCompatActivity {
         btPostPayments.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                requestCounter = 1;
+                responseCounter = 0;
+                pbLl.setVisibility(View.VISIBLE);
                 postPayments(getApplicationContext());
 
-                /*
-
-                String info = "";
-
-                List<Payment> unsyncedPaymentList = stDatabase.stDao().getUnsyncedPayments();
-                for (final Payment payment : unsyncedPaymentList) {
-                    JSONObject jsonObjPayment = new JSONObject();
-                    JSONArray jsonArrReferences = new JSONArray();
-                    JSONObject jsonObjInvoices = new JSONObject();
-                    final Long paymentId = payment.getPaymentId();
-                    Double totalAllocatedAmount = payment.getPaymentAmt();
-                    String modeOfPayment;
-                    if (payment.getChequePayment()) {
-                        break;
-                    } else {
-                        modeOfPayment = "Cash";
-
-                    }
-
-                    stDatabase.stDao().updatePaymentStatus(0, payment.getPaymentId());
-                    int allocatePayment = 1;
-                    String paidTo = "Cash - " + companyAbbreviation;
-                    String partyType = "Customer";
-                    String paidFrom = "Debtors - " + companyAbbreviation;
-                    String party = payment.getCustomerCode();
-                    Double receivedAmount = payment.getPaymentAmt();
-                    String refernceName = payment.getInvoiceNo();
-                    Double allocatedAmount = payment.getPaymentAmt();
-                    String referenceDocType = "Sales Invoice";
-                    String paymentType = "Receive";
-                    Double paidAmount = payment.getPaymentAmt();
-                    String appPaymentId = payment.getAppPaymentId();
-
-                    try {
-                        jsonObjInvoices.put("reference_name", refernceName);
-                        jsonObjInvoices.put("allocated_amount", allocatedAmount);
-                        jsonObjInvoices.put("reference_doctype", referenceDocType);
-
-                        jsonArrReferences.put(jsonObjInvoices);
-
-                        jsonObjPayment.put("total_allocated_amount", totalAllocatedAmount);
-                        jsonObjPayment.put("mode_of_payment", modeOfPayment);
-                        jsonObjPayment.put("allocate_payment_amount", allocatePayment);
-                        jsonObjPayment.put("paid_to", paidTo);
-                        jsonObjPayment.put("party_type", partyType);
-                        jsonObjPayment.put("company", company);
-                        jsonObjPayment.put("paid_from", paidFrom);
-                        jsonObjPayment.put("party", party);
-                        jsonObjPayment.put("received_amount", receivedAmount);
-                        jsonObjPayment.put("references", jsonArrReferences);
-                        jsonObjPayment.put("payment_type", paymentType);
-                        jsonObjPayment.put("paid_amount", paidAmount);
-                        jsonObjPayment.put("app_payment_id", appPaymentId);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        Toast.makeText(getApplicationContext(), "Error in jsonObjPayment", Toast.LENGTH_SHORT).show();
-                    }
-
-                    String url = loginUrl + "/api/resource/Payment%20Entry/";
-                    RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
-                    JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
-                            url, jsonObjPayment,
-                            new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject response) {
-                                    siteUrl = loginUrl;
-                                    //Toast.makeText(getApplicationContext(),
-                                    //    "Logged in" + response, Toast.LENGTH_SHORT).show();
-
-                                    //adding erpnext Order number to the order database table
-                                    Toast.makeText(getApplicationContext(), "payment done!", Toast.LENGTH_SHORT).show();
-                                    JSONObject rJson;
-                                    try {
-                                        rJson = response.getJSONObject("Data");
-                                        String paymentNumber = rJson.getString("name");
-                                        stDatabase.stDao().updatePaymentNumber(paymentNumber, paymentId);
-                                        stDatabase.stDao().updatePaymentStatus(1, paymentId);
-                                        Toast.makeText(getApplicationContext(), paymentNumber, Toast.LENGTH_SHORT).show();
-
-
-                                    } catch (JSONException je) {
-                                        je.printStackTrace();
-                                    }
-                                }
-                            }, new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            error.printStackTrace();
-                            Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
-
-
-                        }
-                    }
-                    );
-                    //jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
-                    //      , 0, 3000));
-                    MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
-
-                    info = info + jsonObjPayment.toString() + "\n\n";
-                    textView.setText(info);
-                }*/
             }
         });
 
@@ -287,11 +209,15 @@ public class LoginActivity extends AppCompatActivity {
         btGetData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                requestCounter = 0;
+                responseCounter = 0;
 
-                if (stDatabase.stDao().countCompany() != 0){
+
+                if (stDatabase.stDao().countCompany() != 0) {
                     stDatabase.stDao().deleteAllCompanies();
                 }
-                ac.getCompanies(siteUrl,getApplicationContext(),stDatabase);
+                ac.getCompanies(siteUrl, getApplicationContext(), stDatabase);
+                requestCounter += 1;
 
 
                 newData = true;
@@ -300,32 +226,44 @@ public class LoginActivity extends AppCompatActivity {
                 }
 
                 syncItems(getApplicationContext());
+                requestCounter += 1;
 
                 if (stDatabase.stDao().countCustomer() != 0) {
                     stDatabase.stDao().deleteAllCustomer();
                 }
 
                 syncCustomers(getApplicationContext());
+                requestCounter += 1;
 
                 if (stDatabase.stDao().countInvoice() != 0) {
                     stDatabase.stDao().deleteAllInvoices();
                 }
                 syncInvoices(getApplicationContext());
+                requestCounter += 1;
 
                 if (stDatabase.stDao().countPriceList() != 0) {
                     stDatabase.stDao().deleteAllPriceLists();
                 }
                 getPriceListList(getApplicationContext());
+                requestCounter += 1;
 
                 if (stDatabase.stDao().countPrice() != 0) {
                     stDatabase.stDao().deleteAllPrice();
                 }
                 getSellingPriceList2(getApplicationContext());
+                requestCounter += 1;
 
                 if (stDatabase.stDao().countAccounts() != 0) {
                     stDatabase.stDao().deleteAllAccounts();
                 }
                 getAccounts(getApplicationContext());
+                requestCounter += 1;
+
+                if (stDatabase.stDao().countUsers() != 0) {
+                    stDatabase.stDao().deleteAllUsers();
+                }
+                getUserConfig(getApplicationContext());
+                requestCounter += 1;
 
 
             }
@@ -342,123 +280,131 @@ public class LoginActivity extends AppCompatActivity {
     }
 
 
-    public void postPayments(Context ctx){
+    public void postPayments(Context ctx) {
 
         String info = "";
 
         List<Payment> unsyncedPaymentList = stDatabase.stDao().getUnsyncedPayments();
-        String companyName, companyAbbreviation;
-        Company company = new Company();
+        if (unsyncedPaymentList.isEmpty()) {
+            responseCounter += 1;
+            handleProgressBar();
+        } else {
+            String companyName, companyAbbreviation;
+            Company company = new Company();
 
-        for (final Payment payment : unsyncedPaymentList) {
-            JSONObject jsonObjPayment = new JSONObject();
-            JSONArray jsonArrReferences = new JSONArray();
-            JSONObject jsonObjInvoices = new JSONObject();
-            final Long paymentId = payment.getPaymentId();
-            Double totalAllocatedAmount = payment.getPaymentAmt();
-            String modeOfPayment;
-            if (payment.getChequePayment()) {
-                break;
-            } else {
-                modeOfPayment = "Cash";
-
-            }
-
-            stDatabase.stDao().updatePaymentStatus(0, payment.getPaymentId());
-            int allocatePayment = 1;
-            companyName = payment.getCompany();
-            company = stDatabase.stDao().getCompanyByName(companyName);
-            companyAbbreviation = company.getAbbr();
-            String paidTo = "Cash - " + companyAbbreviation;
-            String partyType = "Customer";
-            String paidFrom = "Debtors - " + companyAbbreviation;
-            String party = payment.getCustomerCode();
-            Double receivedAmount = payment.getPaymentAmt();
-            String refernceName = payment.getInvoiceNo();
-            Double allocatedAmount = payment.getPaymentAmt();
-            String referenceDocType = "Sales Invoice";
-            String paymentType = "Receive";
-            Double paidAmount = payment.getPaymentAmt();
-            String appPaymentId = payment.getAppPaymentId();
-
-            try {
-                jsonObjInvoices.put("reference_name", refernceName);
-                jsonObjInvoices.put("allocated_amount", allocatedAmount);
-                jsonObjInvoices.put("reference_doctype", referenceDocType);
-
-                jsonArrReferences.put(jsonObjInvoices);
-
-                jsonObjPayment.put("total_allocated_amount", totalAllocatedAmount);
-                jsonObjPayment.put("mode_of_payment", modeOfPayment);
-                jsonObjPayment.put("allocate_payment_amount", allocatePayment);
-                jsonObjPayment.put("paid_to", paidTo);
-                jsonObjPayment.put("party_type", partyType);
-                jsonObjPayment.put("company", companyName);
-                jsonObjPayment.put("paid_from", paidFrom);
-                jsonObjPayment.put("party", party);
-                jsonObjPayment.put("received_amount", receivedAmount);
-                jsonObjPayment.put("references", jsonArrReferences);
-                jsonObjPayment.put("payment_type", paymentType);
-                jsonObjPayment.put("paid_amount", paidAmount);
-                jsonObjPayment.put("app_payment_id", appPaymentId);
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-                Toast.makeText(getApplicationContext(), "Error in jsonObjPayment", Toast.LENGTH_SHORT).show();
-            }
-            Log.d(TAG, "postPayments: \n" + jsonObjPayment.toString());
-            String url = loginUrl + "/api/resource/Payment%20Entry/";
-            RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
-            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
-                    url, jsonObjPayment,
-                    new Response.Listener<JSONObject>() {
-                        @Override
-                        public void onResponse(JSONObject response) {
-                            siteUrl = loginUrl;
-                            //Toast.makeText(getApplicationContext(),
-                            //    "Logged in" + response, Toast.LENGTH_SHORT).show();
-
-                            //adding erpnext Order number to the order database table
-                            Toast.makeText(getApplicationContext(), "payment done!", Toast.LENGTH_SHORT).show();
-                            JSONObject rJson;
-                            try {
-                                rJson = response.getJSONObject("Data");
-                                String paymentNumber = rJson.getString("name");
-                                stDatabase.stDao().updatePaymentNumber(paymentNumber, paymentId);
-                                stDatabase.stDao().updatePaymentStatus(1, paymentId);
-                                Toast.makeText(getApplicationContext(), paymentNumber, Toast.LENGTH_SHORT).show();
-
-
-                            } catch (JSONException je) {
-                                je.printStackTrace();
-                            }
-                        }
-                    }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    error.printStackTrace();
-                    Toast.makeText(getApplicationContext(),
-                            "Cannot post payments!\n" + error.toString(), Toast.LENGTH_SHORT).show();
-
-
+            for (final Payment payment : unsyncedPaymentList) {
+                JSONObject jsonObjPayment = new JSONObject();
+                JSONArray jsonArrReferences = new JSONArray();
+                JSONObject jsonObjInvoices = new JSONObject();
+                final Long paymentId = payment.getPaymentId();
+                Double totalAllocatedAmount = payment.getPaymentAmt();
+                String modeOfPayment;
+                if (payment.getChequePayment()) {
+                    break;
+                } else {
+                    modeOfPayment = "Cash";
 
                 }
-            }
-            );
-            //jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
-            //      , 0, 3000));
-            MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
 
-            info = info + jsonObjPayment.toString() + "\n\n";
-            TextView textView = findViewById(R.id.tv_responseDisplay);
-            textView.setText(info);
+                stDatabase.stDao().updatePaymentStatus(0, payment.getPaymentId());
+                int allocatePayment = 1;
+                companyName = payment.getCompany();
+                company = stDatabase.stDao().getCompanyByName(companyName);
+                companyAbbreviation = company.getAbbr();
+                String paidTo = "Cash - " + companyAbbreviation;
+                String partyType = "Customer";
+                String paidFrom = "Debtors - " + companyAbbreviation;
+                String party = payment.getCustomerCode();
+                Double receivedAmount = payment.getPaymentAmt();
+                String refernceName = payment.getInvoiceNo();
+                Double allocatedAmount = payment.getPaymentAmt();
+                String referenceDocType = "Sales Invoice";
+                String paymentType = "Receive";
+                Double paidAmount = payment.getPaymentAmt();
+                String appPaymentId = payment.getAppPaymentId();
+
+                try {
+                    jsonObjInvoices.put("reference_name", refernceName);
+                    jsonObjInvoices.put("allocated_amount", allocatedAmount);
+                    jsonObjInvoices.put("reference_doctype", referenceDocType);
+
+                    jsonArrReferences.put(jsonObjInvoices);
+
+                    jsonObjPayment.put("total_allocated_amount", totalAllocatedAmount);
+                    jsonObjPayment.put("mode_of_payment", modeOfPayment);
+                    jsonObjPayment.put("allocate_payment_amount", allocatePayment);
+                    jsonObjPayment.put("paid_to", paidTo);
+                    jsonObjPayment.put("party_type", partyType);
+                    jsonObjPayment.put("company", companyName);
+                    jsonObjPayment.put("paid_from", paidFrom);
+                    jsonObjPayment.put("party", party);
+                    jsonObjPayment.put("received_amount", receivedAmount);
+                    jsonObjPayment.put("references", jsonArrReferences);
+                    jsonObjPayment.put("payment_type", paymentType);
+                    jsonObjPayment.put("paid_amount", paidAmount);
+                    jsonObjPayment.put("app_payment_id", appPaymentId);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), "Error in jsonObjPayment", Toast.LENGTH_SHORT).show();
+                }
+                Log.d(TAG, "postPayments: \n" + jsonObjPayment.toString());
+                String url = loginUrl + "/api/resource/Payment%20Entry/";
+                RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
+                        url, jsonObjPayment,
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                siteUrl = loginUrl;
+                                //Toast.makeText(getApplicationContext(),
+                                //    "Logged in" + response, Toast.LENGTH_SHORT).show();
+
+                                //adding erpnext Order number to the order database table
+                                Toast.makeText(getApplicationContext(), "payment done!", Toast.LENGTH_SHORT).show();
+                                JSONObject rJson;
+                                try {
+                                    rJson = response.getJSONObject("Data");
+                                    String paymentNumber = rJson.getString("name");
+                                    stDatabase.stDao().updatePaymentNumber(paymentNumber, paymentId);
+                                    stDatabase.stDao().updatePaymentStatus(1, paymentId);
+                                    Toast.makeText(getApplicationContext(), paymentNumber, Toast.LENGTH_SHORT).show();
+
+
+                                } catch (JSONException je) {
+                                    je.printStackTrace();
+                                }
+                                responseCounter += 1;
+                                handleProgressBar();
+                            }
+                        }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                        responseCounter += 1;
+                        handleProgressBar();
+                        Toast.makeText(getApplicationContext(),
+                                "Cannot post payments!\n" + error.toString(), Toast.LENGTH_SHORT).show();
+
+
+                    }
+                }
+                );
+                //jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
+                //      , 0, 3000));
+                MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
+
+                info = info + jsonObjPayment.toString() + "\n\n";
+                TextView textView = findViewById(R.id.tv_responseDisplay);
+                textView.setText(info);
+            }
         }
 
     }
 
 
-
-    public void postOrders (Context ctx){
+    public void postOrders(Context ctx) {
+        responseCounter = 0;
         JSONObject params = new JSONObject();
         JSONObject taxesC = new JSONObject();
         JSONObject taxesS = new JSONObject();
@@ -469,105 +415,144 @@ public class LoginActivity extends AppCompatActivity {
 
         String info = "";
         List<Order> unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
-        int responseCounter = 0;
         for (Order order : unsycedOrderList) {
-            ac.splitProductListByCompany(order,stDatabase);
-            responseCounter = responseCounter + 1;
-            info = info + "\n\n";
-            String appOrderId = order.getAppOrderId();
-            final Long orderId = order.getOrderId();
-            String priceListName = order.getPriceListName();
-            String territory = order.getTerritory();
-            info = info + orderId;
-            String custCode = order.getCustomerCode();
-            info = info + "\n" + custCode;
-            Calendar calendar = Calendar.getInstance();
-            String deliveryDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + (calendar.get(Calendar.DAY_OF_MONTH));
-            info = info + "\n" + deliveryDate;
-            textView.setText(info);
-            RequestQueue queue = MySingleton.getInstance(getApplicationContext()).getRequestQueue();
+            ac.splitProductListByCompany(order, stDatabase);
+        }
+        unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
+        if (unsycedOrderList.isEmpty()) {
+            responseCounter += 1;
+            handleProgressBar();
+        } else {
+            for (Order order : unsycedOrderList) {
+                JSONArray salesTeamArray = new JSONArray();
 
-            List<OrderProduct> unsyncedOrderProduct = stDatabase.stDao().getOrderProductsById(orderId);
-            JSONArray jsonArray = new JSONArray();
-            for (OrderProduct orderProduct : unsyncedOrderProduct) {
-                JSONObject jsonObject = new JSONObject();
-                String itemCode = orderProduct.getProductCode();
-                Double qty = orderProduct.getQty();
-                Double rate = orderProduct.getRate();
+                info = info + "\n\n";
+                String appOrderId = order.getAppOrderId();
+                final Long orderId = order.getOrderId();
+                String priceListName = order.getPriceListName();
+                if (priceListName == null || priceListName.equals("null")) {
+                    priceListName = "Standard Selling";
+                }
+                String territory = order.getTerritory();
+                String salesPerson = stDatabase.stDao().getUserByEmailId(stDatabase.stDao()
+                        .getAllUserConfig().get(0).getUserId()).getSalesPerson();
+                String company = order.getCompanyName();
+
+                info = info + orderId;
+                String custCode = order.getCustomerCode();
+                info = info + "\n" + custCode;
+                Calendar calendar = Calendar.getInstance();
+                String deliveryDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + (calendar.get(Calendar.DAY_OF_MONTH));
+                info = info + "\n" + deliveryDate;
+                textView.setText(info);
+
+                //creating salesTeamArray
+                JSONObject salesPersonObject = new JSONObject();
                 try {
-                    jsonObject.put("item_code", itemCode);
-                    jsonObject.put("qty", qty);
-                    jsonObject.put("rate", rate);
+                    salesPersonObject.put("parenttype", "Sales Invoice");
+                    salesPersonObject.put("allocated_percentage", "100");
+                    salesPersonObject.put("sales_person", salesPerson);
+                    salesTeamArray.put(salesPersonObject);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    Toast.makeText(ctx, "Error while creating salesPersonObject", Toast.LENGTH_SHORT).show();
+                }
+
+
+                RequestQueue queue = MySingleton.getInstance(getApplicationContext()).getRequestQueue();
+
+                List<OrderProduct> unsyncedOrderProduct = stDatabase.stDao().getOrderProductsById(orderId);
+                JSONArray jsonArray = new JSONArray();
+                for (OrderProduct orderProduct : unsyncedOrderProduct) {
+                    JSONObject jsonObject = new JSONObject();
+                    String itemCode = orderProduct.getProductCode();
+                    Double qty = orderProduct.getQty();
+                    Double rate = orderProduct.getRate();
+                    String costCenter = "Main - " + stDatabase.stDao().getAbbrByCompanyName(company);
+                    double discountPercentage = orderProduct.getDiscountPercentage();
+                    try {
+                        jsonObject.put("item_code", itemCode);
+                        jsonObject.put("qty", qty);
+                        jsonObject.put("rate", rate);
+                        jsonObject.put("discount_percentage", discountPercentage);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    jsonArray.put(jsonObject);
+                }
+                order.setOrderStatus(0);
+                stDatabase.stDao().updateOrder(order);
+                try {
+                    //params.put("delivery_date", deliveryDate);
+                    params.put("customer", custCode);
+                    params.put("territory", territory);
+                    params.put("selling_price_list", priceListName);
+                    params.put("company", company);
+                    params.put("selling_price_list", priceListName);
+                    params.put("items", jsonArray);
+                    params.put("app_invoice_id", appOrderId);
+                    params.put("update_stock", "1");
+
+
+                    taxes = ac.getTaxArray(orderId, stDatabase);
+                    params.put("taxes", taxes);
+                    params.put("sales_team", salesTeamArray);
+
+                    // params.put("taxes_and_charges", "In State GST Inclusive - HE");
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                jsonArray.put(jsonObject);
-            }
-            order.setOrderStatus(0);
-            stDatabase.stDao().updateOrder(order);
-            try {
-                //params.put("delivery_date", deliveryDate);
-                params.put("customer", custCode);
-                params.put("territory",territory);
-                params.put("selling_price_list",priceListName);
-                params.put("items", jsonArray);
-                params.put("app_invoice_id", appOrderId);
+
+                info = info + "\n" + params.toString();
+                textView.setText(info);
+
+                String url = loginUrl + "/api/resource/Sales%20Invoice/";
+                RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
+                        url, params,
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                siteUrl = loginUrl;
+                                //Toast.makeText(getApplicationContext(),
+                                //    "Logged in" + response, Toast.LENGTH_SHORT).show();
+
+                                //adding erpnext Order number to the order database table
+                                JSONObject rJson;
+                                try {
+                                    rJson = response.getJSONObject("Data");
+                                    String orderNumber = rJson.getString("name");
+                                    stDatabase.stDao().updateOrderNumber(orderNumber, orderId);
+                                    stDatabase.stDao().updateOrderStatus(1, orderId);
+                                    Toast.makeText(getApplicationContext(), orderNumber, Toast.LENGTH_SHORT).show();
 
 
-                taxes = ac.getTaxArray(orderId, stDatabase);
-                params.put("taxes", taxes);
+                                } catch (JSONException je) {
+                                    je.printStackTrace();
+                                }
+                                updateUnknownOrderStatuses(loginUrl, getApplicationContext());
+                                responseCounter += 1;
+                                handleProgressBar();
 
-                params.put("taxes_and_charges", "In State GST Inclusive - HE");
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            info = info + "\n" + params.toString();
-            textView.setText(info);
-
-            String url = loginUrl + "/api/resource/Sales%20Invoice/";
-            RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
-            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
-                    url, params,
-                    new Response.Listener<JSONObject>() {
-                        @Override
-                        public void onResponse(JSONObject response) {
-                            siteUrl = loginUrl;
-                            //Toast.makeText(getApplicationContext(),
-                            //    "Logged in" + response, Toast.LENGTH_SHORT).show();
-
-                            //adding erpnext Order number to the order database table
-                            JSONObject rJson;
-                            try {
-                                rJson = response.getJSONObject("Data");
-                                String orderNumber = rJson.getString("name");
-                                stDatabase.stDao().updateOrderNumber(orderNumber, orderId);
-                                stDatabase.stDao().updateOrderStatus(1, orderId);
-                                Toast.makeText(getApplicationContext(), orderNumber, Toast.LENGTH_SHORT).show();
-
-
-                            } catch (JSONException je) {
-                                je.printStackTrace();
                             }
-                        }
-                    }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    error.printStackTrace();
-                    Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
-                    //textView.setText(error.toString());
+                        }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                        responseCounter += 1;
+                        handleProgressBar();
+                        Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                        //textView.setText(error.toString());
+                    }
                 }
+                );
+                //jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
+                //      , 0, 3000));
+                MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
             }
-            );
-            //jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(10000
-            //      , 0, 3000));
-            MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
         }
     }
-
-
-
 
 
     public void deleteOrders(View view) {
@@ -634,12 +619,18 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         }
-                        Toast.makeText(getApplicationContext(), "update completed", Toast.LENGTH_SHORT).show();
+                        responseCounter += 1;
+                        handleProgressBar();
+                        Toast.makeText(getApplicationContext(), "Payment Status Updated", Toast.LENGTH_SHORT).show();
+
                     }
+
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -721,12 +712,17 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         }
-                        Toast.makeText(getApplicationContext(), "update completed", Toast.LENGTH_SHORT).show();
+                        responseCounter += 1;
+                        handleProgressBar();
+                        Toast.makeText(getApplicationContext(), "Invoice Status Updated", Toast.LENGTH_SHORT).show();
                     }
+
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -770,18 +766,22 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(), "Could not fetch accounts", Toast.LENGTH_SHORT).show();
 
                         }
+                        responseCounter += 1;
+                        handleProgressBar();
 
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                responseCounter += 1;
+                handleProgressBar();
             }
         });
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
     }
 
     public void syncItems(Context ctx) {
-
+        pbLl.setVisibility(View.VISIBLE);
         String url = loginUrl + "/api/resource/Item?fields=[\"*\"]&limit_page_length=1000";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
@@ -805,6 +805,8 @@ public class LoginActivity extends AppCompatActivity {
                                 String product_code = item.getString("item_code");
                                 String product_group = item.getString("item_group");
                                 String product_rate = item.getString("standard_rate");
+                                String company = item.getString("company");
+
 
                                 Product product = new Product();
                                 product.setProductCode(product_code);
@@ -813,6 +815,7 @@ public class LoginActivity extends AppCompatActivity {
                                 product.setProductDisabled(disabledB);
                                 product.setProductGroup(product_group);
                                 product.setProductRate(Double.parseDouble(product_rate));
+                                product.setProductCompany(company);
 
                                 stDatabase.stDao().addProduct(product);
 
@@ -827,14 +830,22 @@ public class LoginActivity extends AppCompatActivity {
 
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Toast.makeText(getApplicationContext(), "Item not Done", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), "Error in parsing Item JSON", Toast.LENGTH_SHORT).show();
                         }
+
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
+
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
-                Toast.makeText(getApplicationContext(), "Error in parsing Item JSON", Toast.LENGTH_SHORT).show();
+                responseCounter += 1;
+                handleProgressBar();
+                Toast.makeText(getApplicationContext(), "Error in receiving Item Data", Toast.LENGTH_SHORT).show();
+
+
             }
         }
         );
@@ -874,11 +885,14 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(), "Could not fetch Price Lists", Toast.LENGTH_SHORT).show();
                         }
 
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-
+                responseCounter += 1;
+                handleProgressBar();
             }
         }
         );
@@ -886,6 +900,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void syncCustomers(Context ctx) {
+        pbLl.setVisibility(View.VISIBLE);
         String url = siteUrl + "/api/resource/Customer?fields=[\"*\"]&limit_page_length=1000";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
@@ -905,6 +920,7 @@ public class LoginActivity extends AppCompatActivity {
                                 } else {
                                     disabled = "false";
                                 }
+                                String mobileNo = customer.getString("mobile_no");
                                 Boolean disabledB = Boolean.parseBoolean(disabled);
                                 String customer_id = customer.getString("name");
                                 String customer_group = customer.getString("customer_group");
@@ -924,6 +940,7 @@ public class LoginActivity extends AppCompatActivity {
                                 dbCustomer.setCustomer_group(customer_group);
                                 dbCustomer.setDisplay_name(display_name);
                                 dbCustomer.setPrice_list(price_list);
+                                dbCustomer.setMobileNo(mobileNo);
                                 //dbCustomer.setLatitude(latitude);
                                 //dbCustomer.setLongitude(longitude);
 
@@ -935,11 +952,16 @@ public class LoginActivity extends AppCompatActivity {
                             e.printStackTrace();
                             Toast.makeText(getApplicationContext(), "Customer not Done", Toast.LENGTH_SHORT).show();
                         }
+
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Error in parsing Customer JSON", Toast.LENGTH_SHORT).show();
             }
         }
@@ -948,7 +970,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void getStockBalance(Context ctx) {
-        String url = siteUrl + "/?report_name=Stock+Balance&filters=%7B%22from_date%22%3A%222018-11-30%22%2C%22to_date%22%3A%222019-01-01%22%7D&cmd=frappe.desk.query_report.run&_=1546137019256";
+        pbLl.setVisibility(View.VISIBLE);
+        String url = siteUrl + "/?report_name=Stock+Balance&filters=%7B%22from_date%22%3A%22" + getCurrentDate() + "%22%2C%22to_date%22%3A%22" + getCurrentDate() + "%22%7D&cmd=frappe.desk.query_report.run&_=1546137019256";
         final TextView textView = findViewById(R.id.tv_responseDisplay);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
@@ -980,12 +1003,18 @@ public class LoginActivity extends AppCompatActivity {
                             textView.setText(e.toString());
                         }
 
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Error in receiving Stock Balance", Toast.LENGTH_SHORT).show();
+
+
             }
 
         }
@@ -995,9 +1024,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void syncInvoices(Context ctx) {
-        final ProgressBar progressBar = findViewById(R.id.pbHeaderProgress);
+        pbLl.setVisibility(View.VISIBLE);
         String url = siteUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"customer\",\"grand_total\",\"company\",\"outstanding_amount\",\"docstatus\",\"posting_date\"]&limit_page_length=2000";
-        progressBar.setVisibility(View.VISIBLE);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
@@ -1033,14 +1061,16 @@ public class LoginActivity extends AppCompatActivity {
                             e.printStackTrace();
                             Toast.makeText(getApplicationContext(), "Invoice not Done", Toast.LENGTH_SHORT).show();
                         }
-                        progressBar.setVisibility(View.GONE);
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Error in receiving Invoice JSON", Toast.LENGTH_SHORT).show();
-                progressBar.setVisibility(View.GONE);
             }
         }
         );
@@ -1083,12 +1113,23 @@ public class LoginActivity extends AppCompatActivity {
                         siteUrl = loginUrl;
                         Toast.makeText(getApplicationContext(),
                                 "Logged in" + response.toString(), Toast.LENGTH_SHORT).show();
+                        try {
+                            JSONObject json = new JSONObject(response);
+                            String fullName = json.getString("full_name");
 
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
+                responseCounter += 1;
+                handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Cannot login.", Toast.LENGTH_SHORT).show();
             }
         }) {
@@ -1141,11 +1182,14 @@ public class LoginActivity extends AppCompatActivity {
                             counter++;
                         }
                         //textView.setText(sb.toString());
-
+                        responseCounter += 1;
+                        handleProgressBar();
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                responseCounter += 1;
+                handleProgressBar();
 
             }
         }
@@ -1292,6 +1336,64 @@ public class LoginActivity extends AppCompatActivity {
         MySingleton.getInstance(ctx).addToRequestQueue(stringRequest);
     }
 
+
+    public void getUserConfig(final Context ctx) {
+        String url = loginUrl + "/api/resource/User/?fields=[\"email\",\"full_name\",\"send_sms_from_mobile\",\"can_edit_rate\",\"sales_person\"]";
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                Request.Method.GET, url, null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        JSONArray data = new JSONArray();
+                        JSONObject jsonObject = new JSONObject();
+                        try {
+                            data = response.getJSONArray("data");
+                            for (int i = 0; i < data.length(); i++) {
+                                jsonObject = data.getJSONObject(i);
+                                String email = jsonObject.getString("email");
+                                int sendSms = jsonObject.getInt("send_sms_from_mobile");
+                                int allowRateChange = jsonObject.getInt("can_edit_rate");
+                                String salesPerson = jsonObject.getString("sales_person");
+                                String emailId = jsonObject.getString("email");
+                                String fullName = jsonObject.getString("full_name");
+                                User user = new User();
+                                user.setCanEditRate(allowRateChange);
+                                user.setEmailId(emailId);
+                                user.setFullName(fullName);
+                                user.setSendSms(sendSms);
+                                user.setSalesPerson(salesPerson);
+                                stDatabase.stDao().addUser(user);
+                                if (email.equals(loginEmail)) {
+                                    List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
+                                    UserConfig userConfig = userConfigList.get(0);
+                                    userConfig.setSendSms(sendSms);
+                                    userConfig.setAllowRateChange(allowRateChange);
+                                    userConfig.setSalesPerson(salesPerson);
+                                    stDatabase.stDao().updateUserConfig(userConfig);
+                                    Toast.makeText(ctx, "Fetched UserConfig.", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(), "Error in parsing UserConfig", Toast.LENGTH_SHORT).show();
+
+                        }
+                        responseCounter += 1;
+                        handleProgressBar();
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(ctx, "Eror in fetching UserConfig", Toast.LENGTH_SHORT).show();
+                responseCounter += 1;
+                handleProgressBar();
+            }
+        });
+        MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
+    }
+
+
     public int countChar(String str, char c) {
         int count = 0;
 
@@ -1303,13 +1405,49 @@ public class LoginActivity extends AppCompatActivity {
         return count;
     }
 
+    private void handleProgressBar() {
+        if (requestCounter == responseCounter) {
+            pbLl.setVisibility(View.GONE);
+        }
+    }
+
+    private String getCurrentDate() {
+        String currentDate;
+        Date c = Calendar.getInstance().getTime();
+        System.out.println("Current time => " + c);
+
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        currentDate = df.format(c);
+
+        return currentDate;
+    }
+
+    private void fillLoginInfo() {
+        List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
+        UserConfig userConfig = userConfigList.get(0);
+        tvUrl.setText(userConfig.getLoginUrl());
+        tvLoginEmail.setText(userConfig.getUserId());
+        tvLoginPassword.setText(userConfig.getPassword());
+    }
+
+    private void saveLoginInfo() {
+        if (stDatabase.stDao().countUserConfig() != 0) {
+            stDatabase.stDao().deleteAllUserConfig();
+        }
+
+        UserConfig userConfig = new UserConfig();
+        userConfig.setUserId(loginEmail);
+        userConfig.setPassword(loginPassword);
+        userConfig.setLoginUrl(loginUrl);
+        stDatabase.stDao().addUserConfig(userConfig);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        int smsPermissionGranted = ac.onResultOfRequestPermission(requestCode, permissions, grantResults, this);
+    }
+
+
+
 }
-
-
-
-
-
-
-
-
-

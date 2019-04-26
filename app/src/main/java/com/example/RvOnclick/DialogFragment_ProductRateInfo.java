@@ -4,6 +4,7 @@ package com.example.RvOnclick;
 import android.arch.persistence.room.Room;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
@@ -32,10 +33,11 @@ import java.util.List;
 public class DialogFragment_ProductRateInfo extends DialogFragment {
     TextView tv;
     Button btProductSave, btIncrease, btDecrease, btCancel;
-    EditText etQty, etRate;
+    EditText etQty, etRate, etFreeQty;
     public static StDatabase stDatabase;
     public String custCode, priceListName, territory;
     public long orderId;
+    ApplicationController ac = new ApplicationController();
 
     public DialogFragment_ProductRateInfo() {
         // Required empty public constructor
@@ -53,7 +55,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         territory = intent.getStringExtra("territory");
 
 
-        ApplicationController ac = new ApplicationController();
+
 
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__product_rate_info, container, false);
@@ -65,6 +67,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         btIncrease = view.findViewById(R.id.bt_increase);
         btDecrease = view.findViewById(R.id.bt_decrease);
         etQty = view.findViewById(R.id.et_qty);
+        etFreeQty = view.findViewById(R.id.et_freeQty);
 
 
 
@@ -72,8 +75,13 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         etRate = view.findViewById(R.id.et_rate);
 
         etRate.setText(String.valueOf(getArguments().getDouble("rate")));
+        if (stDatabase.stDao().getAllUserConfig().get(0).getAllowRateChange()==0){
+            disableEditText(etRate);
+        }
         Double qty = getArguments().getDouble("qty");
+        double freeQty = getArguments().getDouble("freeQty");
         etQty.setText(Double.toString(qty));
+        etFreeQty.setText(Double.toString(freeQty));
 
         if (getTargetRequestCode()==1) {
             etQty.setText("1.0");
@@ -87,10 +95,26 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
             @Override
             public void onClick(View v) {
                 Double qty = Double.parseDouble(etQty.getText().toString());
+                if (etFreeQty.getText().toString().equals("")){etFreeQty.setText("0");}
+                double freeQty = Double.parseDouble(etFreeQty.getText().toString());
                 Double rate = Double.parseDouble((etRate.getText().toString()));
                 if (qty > 0) {
                     CreateNewOrderIfNotExists(orderId);
-                    AddProductToOrder(orderId, prodCode, qty, rate);
+                    long existingId = alreadyPresent(orderId,prodCode);
+                    if (existingId!=0) {
+                        //same item already existing will be deleted.
+                        OrderProduct orderProduct=stDatabase.stDao().getOrderProdutByOrderProductId(existingId);
+                        if (orderProduct.getParentId()!=0){
+                            //passing parentId instead of childId to delete both parent and child.
+                            existingId = orderProduct.getParentId();
+                        }
+                        ac.deleteOrderProduct(existingId,stDatabase);
+                    }
+                       long parentId = AddProductToOrder(orderId, prodCode, qty, rate);
+
+                    if (freeQty>0){
+                        addFreeQtyToOrder(orderId,prodCode,freeQty,parentId);
+                    }
                 }
 
                 int countOfProducts;
@@ -172,17 +196,22 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     }
 
     //Adds items to the order in OrderProduct database table
-    public void AddProductToOrder(long orderId, String prodCode, double qty, double rate) {
+    public long AddProductToOrder(long orderId, String prodCode, double qty, double rate) {
         ApplicationController ac = new ApplicationController();
         Product product = stDatabase.stDao().getProductByProductCode(prodCode);
-        String companyName = product.getProductCompany();
+        String companyName = getCompanyName(prodCode);
         OrderProduct orderProduct = new OrderProduct();
-        orderProduct.setOrderId((int) orderId);
+        orderProduct.setOrderId(orderId);
         orderProduct.setProductCode(prodCode);
         orderProduct.setQty(qty);
         orderProduct.setRate(rate);
+
         orderProduct.setCompanyName(companyName);
-        Boolean notPresent = true;
+
+        long parentId = stDatabase.stDao().addProductToOrder(orderProduct);
+        ac.updateCurrentOrderQty(orderId, stDatabase);
+
+        /*Boolean notPresent = true;
         //check to see if the product is already present in the order
         List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
         for (OrderProduct op : orderProductList) {
@@ -199,7 +228,37 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
             //orderProduct = createGstJsonArray()
             stDatabase.stDao().addProductToOrder(orderProduct);
             ac.updateCurrentOrderQty(orderId, stDatabase);
+        }*/
+
+        return parentId;
+    }
+
+    private void addFreeQtyToOrder(long orderId, String prodCode,double freeQty, long parentId){
+        String companyName = getCompanyName(prodCode);
+        OrderProduct orderProduct = new OrderProduct();
+        OrderProduct parent = new OrderProduct();
+        orderProduct.setOrderId(orderId);
+        orderProduct.setProductCode(prodCode);
+        orderProduct.setParentId(parentId);
+        orderProduct.setQty(freeQty);
+        orderProduct.setDiscountPercentage(100.0);
+        orderProduct.setCompanyName(companyName);
+        long childId = stDatabase.stDao().addProductToOrder(orderProduct);
+        parent = stDatabase.stDao().getOrderProdutByOrderProductId(parentId);
+        parent.setChildId(childId);
+        stDatabase.stDao().updateOrderProduct(parent);
+    }
+
+    private long alreadyPresent(long orderId, String prodCode){
+        long existingId=0;
+        List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
+        for (OrderProduct op : orderProductList) {
+            if (op.getProductCode().equals(prodCode)) {
+                existingId = op.getOrderProductId();
+            }
         }
+
+        return existingId;
     }
 
 
@@ -253,5 +312,37 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
     }
 
+
+    private void disableEditText(EditText editText) {
+        editText.setFocusable(false);
+        editText.setEnabled(false);
+        editText.setCursorVisible(false);
+        editText.setKeyListener(null);
+        editText.setTextColor(Color.BLACK);
+        editText.setBackgroundColor(Color.TRANSPARENT);
+    }
+
+    private String getCompanyName(String pCode){
+        String companyName=stDatabase.stDao().getProductByProductCode(pCode).getProductCompany();
+        boolean companyDefaultSet=false;
+        if (companyName==null||companyName.equals("null")){
+            //company name might be null if company name has not been added to the Company custom field for Item
+            //hence default company will be added to those
+            //if no default company is set presumably the first company will be added
+            List<Company> companies = stDatabase.stDao().getAllCompanies();
+            for (Company company:companies){
+                if (company.getIsDefault()==1){
+                    companyName = company.getCompanyName();
+                    companyDefaultSet=true;
+                    break;
+                }
+            }
+            if (!companyDefaultSet){
+                companyName = companies.get(0).getCompanyName();
+            }
+        }
+
+        return companyName;
+    }
 
 }

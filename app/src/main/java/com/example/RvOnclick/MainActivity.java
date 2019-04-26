@@ -13,12 +13,14 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.location.LocationServices;
 
 import java.security.Permission;
 
 public class MainActivity extends AppCompatActivity {
+    ApplicationController ac = new ApplicationController();
     
 
     @Override
@@ -82,6 +84,18 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return super.dispatchTouchEvent( event );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        int smsPermissionGranted=ac.onResultOfRequestPermission(requestCode,permissions,grantResults,this);
+        if (smsPermissionGranted==1){
+            String mobileNo = getIntent().getStringExtra("mobileNo");
+            String smsContent = getIntent().getStringExtra("smsContent");
+            ac.sendSms(mobileNo,smsContent, this);
+
+        }
     }
 
 }

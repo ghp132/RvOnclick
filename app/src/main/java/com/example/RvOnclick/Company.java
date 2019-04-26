@@ -10,6 +10,15 @@ public class Company {
     @NonNull
     private String companyName;
     private String abbr;
+    int isDefault;
+
+    public int getIsDefault() {
+        return isDefault;
+    }
+
+    public void setIsDefault(int isDefault) {
+        this.isDefault = isDefault;
+    }
 
     public String getAbbr() {
         return abbr;

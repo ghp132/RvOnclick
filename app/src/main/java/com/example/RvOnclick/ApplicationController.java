@@ -1,8 +1,13 @@
 package com.example.RvOnclick;
 
+import android.Manifest;
 import android.app.Activity;
+import android.arch.persistence.room.Room;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
+import android.support.v4.app.ActivityCompat;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -124,9 +129,11 @@ public class ApplicationController {
                                 cList = data.getJSONObject(i);
                                 String companyName = cList.getString("company_name");
                                 String abbr = cList.getString("abbr");
+                                int isDefault = cList.getInt("is_default");
                                 Company company = new Company();
                                 company.setCompanyName(companyName);
                                 company.setAbbr(abbr);
+                                company.setIsDefault(isDefault);
                                 stDatabase.stDao().addCompnany(company);
 
                             }
@@ -159,15 +166,16 @@ public class ApplicationController {
             List<String> companyNameList = new ArrayList<>();
             for (OrderProduct op : orderProductList) {
                 String company = op.getCompanyName();
+                String testProd = op.getProductCode();
                 if (!companyNameList.contains(company)) {
                     companyNameList.add(company);
                 }
             }
             if (companyNameList.size() > 1) {
                 int counter = 1;
-                Long newOrderId = Long.valueOf("-1");
                 for (String company : companyNameList) {
                     if (counter > 1) {
+                        Long newOrderId = Long.valueOf("-1");
                         for (OrderProduct op : orderProductList) {
                             if (op.getCompanyName().equals(company)) {
                                 //create new order with product
@@ -180,10 +188,16 @@ public class ApplicationController {
                             }
 
                         }
+                    }else{
+                        order.setCompanyName(company);
+                        stDatabase.stDao().updateOrder(order);
                     }
                     counter++;
                 }
 
+            } else if (companyNameList.size()==1){
+                order.setCompanyName(companyNameList.get(0));
+                stDatabase.stDao().updateOrder(order);
             }
         } else if (stDatabase.stDao().countCompany() == 1) {
             List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(order.getOrderId());
@@ -217,7 +231,7 @@ public class ApplicationController {
         TblSettings configCgst = stDatabase.stDao().getConfigByName(CONFIG_CGST_NAME);
         String cgstAccountName;
         if (configCgst == null){
-            cgstAccountName = "CGST";
+            cgstAccountName = "Central GST";
         } else {
             cgstAccountName = configCgst.getSvalues();
         }
@@ -225,7 +239,7 @@ public class ApplicationController {
         TblSettings configSgst = stDatabase.stDao().getConfigByName(CONFIG_SGST_NAME);
         String sgstAccountName;
         if (configSgst == null){
-            sgstAccountName = "SGST";
+            sgstAccountName = "State GST";
         } else {
             sgstAccountName = configSgst.getSvalues();
         }
@@ -312,7 +326,7 @@ public class ApplicationController {
         List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderProduct.getOrderId());
         for (OrderProduct op : orderProductList) {
             if (op.getProductCode().equals(orderProduct.getProductCode())) {
-                int orderProductId = op.getOrderProductId();
+                long orderProductId = op.getOrderProductId();
                 stDatabase.stDao().updateOrderProduct(orderProduct);
                 notPresent = false;
                 break;
@@ -359,8 +373,79 @@ public class ApplicationController {
         return  nearbyCustomers;
     }
 
+    public void showKeyboard(View view,Context ctx){
+        //if (view!=null){
+        InputMethodManager imm = (InputMethodManager) ctx.getSystemService(ctx.INPUT_METHOD_SERVICE);
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);        //}
+    }
+
+    public int checkForSmsPermission(Context ctx,int requestCode) {
+        int permissionGranted;
+        if (ActivityCompat.checkSelfPermission(ctx,
+                Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            // Permission not yet granted. Use requestPermissions().
+            // MY_PERMISSIONS_REQUEST_SEND_SMS is an
+            // app-defined int constant. The callback method gets the
+            // result of the request.
+            ActivityCompat.requestPermissions((Activity) ctx,
+                    new String[]{Manifest.permission.SEND_SMS},
+                    requestCode);
+            permissionGranted=0;
+        } else {
+            // Permission already granted.
+            permissionGranted=1;
+        }
+        return permissionGranted;
+    }
+
+    public int onResultOfRequestPermission(int requestCode,
+                                           String permissions[], int[] grantResults, Context ctx){
+        int permissionGranted=0;
+        switch (requestCode) {
+            case 1: {
+                if (permissions[0].equalsIgnoreCase(Manifest.permission.SEND_SMS)
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission was granted
+                    permissionGranted=1;
+                } else {
+                    // Permission denied.
+                    Toast.makeText(ctx, "SMS Permission was denied", Toast.LENGTH_SHORT).show();
+                    permissionGranted=0;
+                }
+            }
+        }
+        return permissionGranted;
+    }
+
+
+    public void deleteOrderProduct(long orderProductId, StDatabase stDatabase){
+        OrderProduct orderProduct = stDatabase.stDao().getOrderProdutByOrderProductId(orderProductId);
+        long childId = orderProduct.getChildId();
+        long parentId = orderProduct.getParentId();
+        if (childId!=0) {
+            OrderProduct childOrderProduct = stDatabase.stDao().getOrderProdutByOrderProductId(childId);
+            stDatabase.stDao().deleteOrderProduct(childOrderProduct);
+        }
+        if (parentId!=0){
+            OrderProduct parentOrderProduct = stDatabase.stDao().getOrderProdutByOrderProductId(parentId);
+            parentOrderProduct.setChildId(0);
+            stDatabase.stDao().updateOrderProduct(parentOrderProduct);
+        }
+        stDatabase.stDao().deleteOrderProduct(orderProduct);
+
+
+    }
+
+    public void sendSms(String mobileNo, String smsContent, Context ctx){
+        SmsManager smsManager = SmsManager.getDefault();
+        smsManager.sendTextMessage(mobileNo,null,smsContent,null,null);
+        Log.d(TAG, "sendSms: Sent:"+mobileNo+":"+smsContent);
+        Toast.makeText(ctx, "SMS Sent.", Toast.LENGTH_SHORT).show();
+    }
+
+
+    public interface OnPriceProcessedListener {
+        void onPriceProcessed(int position);
+    }
 
 }
-
-
-

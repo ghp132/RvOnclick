@@ -20,7 +20,8 @@
         android:layout_marginTop="4dp"
         android:layout_marginEnd="4dp"
         android:ems="10"
-        android:inputType="numberDecimal" />
+        android:inputType="numberDecimal"
+        android:selectAllOnFocus="true"/>
 
     <CheckBox
         android:id="@+id/cb_cheque"

@@ -35,7 +35,16 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProdView
         prodViewHolder.tvProductName.setText(product.getProductName());
         prodViewHolder.tvAdded.setText(String.valueOf(product.getProductRate()));
         prodViewHolder.tvCount.setText(String.valueOf(product.getStock()));
-        prodViewHolder.tvOrder.setText(Boolean.toString(product.getProductDisabled()));
+        double currentOrderQty = product.getCurrentOrderQty();
+        double currentOrderFreeQty = product.getCurrentOrderFreeQty();
+        String orderQty="";
+        if (currentOrderQty!=0){
+            orderQty=String.valueOf(currentOrderQty);
+            if (currentOrderFreeQty!=0){
+                orderQty = orderQty + "(" + currentOrderFreeQty + ")";
+            }
+        }
+        prodViewHolder.tvOrder.setText(orderQty);
         //prodViewHolder.itemView.setOutlineSpotShadowColor(0xff00ff00);
 
     }

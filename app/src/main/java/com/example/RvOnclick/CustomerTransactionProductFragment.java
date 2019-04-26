@@ -1,8 +1,11 @@
 package com.example.RvOnclick;
 
 
+import android.app.ProgressDialog;
 import android.arch.persistence.room.Room;
+import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -26,16 +29,24 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class CustomerTransactionProductFragment extends Fragment implements ProductAdapter.OnItemClickListener {
+public class CustomerTransactionProductFragment extends Fragment implements
+        ProductAdapter.OnItemClickListener, OnItemProcessedListener,
+ApplicationController.OnPriceProcessedListener{
 
 
     public static StDatabase stDatabase;
     protected String custCode;
-    public int orderId, orderStatus;
+    public int orderId, orderStatus, fragmentId;
     public List<Product> productList, searchableProductList;
+    ProductAdapter productAdapter;
+    RecyclerView recyclerView;
     private ProductAdapter.OnItemClickListener listener;
+    private OnItemProcessedListener itemProcessedListener;
+    private ApplicationController.OnPriceProcessedListener priceProcessedListener;
     EditText productSearchBox;
+    ProgressDialog progressDialog;
     public static String TAG = "CustomerTransactionFragment";
+    private String priceList;
 
     public CustomerTransactionProductFragment() {
         // Required empty public constructor
@@ -47,7 +58,11 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_customer_transaction_product, container, false);
+        stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
+                .allowMainThreadQueries().build();
         ApplicationController ac = new ApplicationController();
+        fragmentId=this.getId();
+        stDatabase.stDao().resetCurrentOrderQty();
 
         //Toast.makeText(getActivity().getApplicationContext(),getActivity().getIntent().getStringExtra("orderId"),Toast.LENGTH_SHORT).show();
         custCode = getArguments().getString("custCode");
@@ -62,30 +77,26 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
         }
         productSearchBox = view.findViewById(R.id.et_productSearch);
 
-        stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
-                .allowMainThreadQueries().build();
+
         productList = stDatabase.stDao().getEnabledProducts(false);
         //updating prices based on the default price list
         Customer customer = stDatabase.stDao().getCustomerbyCustomerCode(custCode);
-        String priceList = customer.getPrice_list();
-        //ac.makeShortToast(getActivity(),"went through this " + priceList);
+        priceList = customer.getPrice_list();
+        if (priceList.equals("null")) {
+            priceList = "Standard Selling";
+        }
 
-        List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
-        getActivity().getIntent().putExtra("priceList","Standard Selling");
+        //List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
+        getActivity().getIntent().putExtra("priceList", "Standard Selling");
         if (priceList != null) {
-            getActivity().getIntent().putExtra("priceList",customer.getPrice_list());
-            getActivity().getIntent().putExtra("territory",customer.getTerritory());
+            getActivity().getIntent().putExtra("priceList", priceList);
+            getActivity().getIntent().putExtra("territory", customer.getTerritory());
+
+            priceProcessedListener = this;
+            new UpdatePrices(productList,priceList,priceProcessedListener).execute();
 
 
-            for (Product product : productList) {
-                //setting the price of all items to 0 before updating prices from price list
-                product.setProductRate(0);
-                stDatabase.stDao().updateProduct(product);
-                int indexOfProduct = productList.indexOf(product);
-                productList.set(indexOfProduct, product);
-
-            }
-
+            /*stDatabase.stDao().resetProductRate();
 
             for (Price p : prices) {
                 //updating prices of all items from the customer price list
@@ -100,26 +111,29 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                         stDatabase.stDao().updateProduct(product);
                         productList.set(indexOfProduct, product);
                         Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
+                        break;
                     }
                 }
-            }
+            }*/
 
         }
 
 
-        final RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
+        recyclerView = (RecyclerView) view.findViewById(R.id.product_recyclerview);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
         productList = sortProductList(productList);
 
-
+        itemProcessedListener = this;
         listener = this;
-        final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
+        productAdapter = new ProductAdapter(listener, productList, getActivity());
         recyclerView.setAdapter(productAdapter);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         productAdapter.notifyDataSetChanged();
-
+        if (orderId != -1) {
+            new UpdateCurrentOrderQty(productList).execute();
+        }
 
         productSearchBox.addTextChangedListener(new TextWatcher() {
             @Override
@@ -140,9 +154,11 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
                     }
                 }
 
-                productList = sortProductList(filtered);
-                final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
-                recyclerView.setAdapter(productAdapter);
+                productList.clear();
+                productList.addAll(sortProductList(filtered));
+                //productList = sortProductList(filtered);
+                //final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
+                //recyclerView.setAdapter(productAdapter);
                 productAdapter.notifyDataSetChanged();
 
 
@@ -167,6 +183,9 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
         getActivity().getIntent().putExtra("orderId", String.valueOf(orderId));
 
         productSearchBox.selectAll();
+        if (orderId != -1) {
+            new UpdateCurrentOrderQty(productList).execute();
+        }
     }
 
 
@@ -176,6 +195,7 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
             orderStatus = -1;
         } else {
             orderStatus = stDatabase.stDao().getOrderStatusByOrderId(orderId);
+
         }
         if (orderStatus == -1) {
             String prodCode = productList.get(position).getProductCode();
@@ -213,10 +233,172 @@ public class CustomerTransactionProductFragment extends Fragment implements Prod
     }
 
 
-    /*protected void onSaveInstanceState(Bundle state){
-        super.onSaveInstanceState(state);
-        mListState = mLayoutmMlayoutManager.onSaveInstance();
-    }*/
+    @Override
+    public void onItemProcessed(Product product, int position) {
+        productList.remove(position);
+        productList.add(position, product);
+        productAdapter.notifyItemChanged(position);
+    }
 
+    @Override
+    public void onPriceProcessed(final int position) {
+        try {
+            getActivity().runOnUiThread(new Runnable() {
+
+                @Override
+                public void run() {
+
+                    // Stuff that updates the UI
+
+                    //productList.remove(position);
+                    //productList.add(position, product);
+                    productAdapter.notifyItemChanged(position);
+
+                }
+            });
+        } catch (NullPointerException e){
+            Log.d(TAG, "onPriceProcessed: callBack" + e.toString());
+        }
+
+
+    }
+
+
+    private class UpdateCurrentOrderQty extends AsyncTask<String, Integer, String> {
+        List<Product> at1ProductList;
+
+        public UpdateCurrentOrderQty(List<Product> at1ProductList) {
+            this.at1ProductList = at1ProductList;
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            List<OrderProduct> orderProducts = stDatabase.stDao().getOrderProductsById(orderId);
+            for (OrderProduct op : orderProducts) {
+                String orderProdCode = op.getProductCode();
+                for (Product product : at1ProductList) {
+                    String prodCode = product.getProductCode();
+                    if (orderProdCode.equals(prodCode) && op.getParentId() == 0) {
+                        //child item will be skipped from looping once again through the product list
+                        //child item will loop through the order item to get freeQty and update the item
+                        double qty = op.getQty();
+                        int positionOfProduct = at1ProductList.indexOf(product);
+                        product.setCurrentOrderQty(qty);
+                        stDatabase.stDao().updateProduct(product);
+                        if (op.getChildId() != 0) {
+                            for (OrderProduct innerOp : orderProducts) {
+                                //looping through items in order to get the free item and qty
+                                if (op.getChildId() == innerOp.getOrderProductId()) {
+                                    double freeQty = innerOp.getQty();
+                                    product.setCurrentOrderFreeQty(freeQty);
+                                    at1ProductList.remove(positionOfProduct);
+                                    at1ProductList.add(positionOfProduct, product);
+                                    stDatabase.stDao().updateProduct(product);
+
+                                }
+                            }
+                        }
+                        //itemProcessedListener2.onItemProcessed(product,positionOfProduct);
+                        onProgressUpdate(positionOfProduct);
+                        break;
+                    }
+                }
+
+            }
+
+
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(final Integer... values) {
+            try {
+                getActivity().runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+
+                        // Stuff that updates the UI
+                        productAdapter.notifyItemChanged(values[0]);
+
+                    }
+                });
+            } catch (NullPointerException e){
+                Log.d(TAG, "onProgressUpdate: " + e.toString());
+                e.printStackTrace();
+            }
+
+
+        }
+    }
+
+    private static class UpdatePrices extends AsyncTask<String,Integer,Void>{
+        List<Product> at2ProductList=new ArrayList<>();
+        String priceList;
+        ApplicationController.OnPriceProcessedListener priceProcessedListener;
+        UpdatePrices(List<Product> at2ProductList, String priceList, ApplicationController.OnPriceProcessedListener priceProcessedListener) {
+            this.at2ProductList.addAll(at2ProductList);
+            this.priceList = priceList;
+            this.priceProcessedListener=priceProcessedListener;
+        }
+
+        @Override
+        protected Void doInBackground(String... strings) {
+            List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
+            //getActivity().getIntent().putExtra("priceList", "Standard Selling");
+            if (priceList != null) {
+                //getActivity().getIntent().putExtra("priceList", priceList);
+                //getActivity().getIntent().putExtra("territory", customer.getTerritory());
+
+
+                stDatabase.stDao().resetProductRate();
+
+                for (Price p : prices) {
+                    //updating prices of all items from the customer price list
+                    String prodCodeFromPrices = p.getProductCode();
+                    for (Product product : at2ProductList) {
+                        Product updatedProduct;
+                        String prodCode = product.getProductCode();
+                        Log.d(TAG, "onCreateView: prodCode");
+                        if (prodCodeFromPrices.equals(prodCode)) {
+                            int indexOfProduct = at2ProductList.indexOf(product);
+                            updatedProduct = product;
+                            updatedProduct.setProductRate(p.getPrice());
+                            //check later
+                            stDatabase.stDao().updateProduct(updatedProduct);
+                            //at2ProductList.set(indexOfProduct, product);
+                            Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
+                            //if ()
+                            publishProgress(indexOfProduct);
+                            break;
+                        }
+                    }
+                }
+
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(final Integer... values) {
+            priceProcessedListener.onPriceProcessed(values[0]);
+            /* try {
+                .runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+
+                        // Stuff that updates the UI
+                        productAdapter.notifyItemChanged(values[0]);
+
+                    }
+                });
+            } catch (NullPointerException e){
+                Log.d(TAG, "onProgressUpdate: "+e.toString());
+                e.printStackTrace();
+            }*/
+        }
+    }
 
 }
