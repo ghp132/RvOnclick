@@ -19,6 +19,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -34,9 +35,11 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.HttpCookie;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -91,6 +94,7 @@ public class LoginActivity extends AppCompatActivity {
         CookieManager manager = new CookieManager();
         CookieHandler.setDefault(manager);
         final CookieStore cookieStore = manager.getCookieStore();
+
 
         if (stDatabase.stDao().countUserConfig() >= 1) {
             fillLoginInfo();
@@ -217,7 +221,7 @@ public class LoginActivity extends AppCompatActivity {
                     stDatabase.stDao().deleteAllCompanies();
                 }
                 ac.getCompanies(siteUrl, getApplicationContext(), stDatabase);
-                requestCounter += 1;
+                //requestCounter += 1;
 
 
                 newData = true;
@@ -434,6 +438,7 @@ public class LoginActivity extends AppCompatActivity {
                     priceListName = "Standard Selling";
                 }
                 String territory = order.getTerritory();
+                //CustomField sales person to be added in User Doctype
                 String salesPerson = stDatabase.stDao().getUserByEmailId(stDatabase.stDao()
                         .getAllUserConfig().get(0).getUserId()).getSalesPerson();
                 String company = order.getCompanyName();
@@ -830,8 +835,9 @@ public class LoginActivity extends AppCompatActivity {
 
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Toast.makeText(getApplicationContext(), "Error in parsing Item JSON", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_SHORT).show();
                         }
+                        //tvResponseDisplay.setText("syncItemError");
 
                         responseCounter += 1;
                         handleProgressBar();
@@ -899,7 +905,7 @@ public class LoginActivity extends AppCompatActivity {
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
     }
 
-    public void syncCustomers(Context ctx) {
+    public void syncCustomers(final Context ctx) {
         pbLl.setVisibility(View.VISIBLE);
         String url = siteUrl + "/api/resource/Customer?fields=[\"*\"]&limit_page_length=1000";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
@@ -950,7 +956,7 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(), "Customer Done", Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Toast.makeText(getApplicationContext(), "Customer not Done", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), "Error in parsing customer Json", Toast.LENGTH_SHORT).show();
                         }
 
                         responseCounter += 1;
@@ -959,10 +965,23 @@ public class LoginActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                String body="";
                 error.printStackTrace();
                 responseCounter += 1;
                 handleProgressBar();
-                Toast.makeText(getApplicationContext(), "Error in parsing Customer JSON", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Error in receiving Customer JSON", Toast.LENGTH_SHORT).show();
+                tvResponseDisplay.setText("syncCustomerError");
+                if (error.networkResponse.data!=null){
+                    try{
+                        body = new String(error.networkResponse.data,"UTF-8");
+                    }catch (UnsupportedEncodingException e){
+                        e.printStackTrace();
+                        Toast.makeText(ctx, "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                        tvResponseDisplay.setText(body);
+                        Log.d(TAG, "onErrorResponse: SyncCustomer" + body);
+
+                    }
+                }
             }
         }
         );
@@ -1113,6 +1132,7 @@ public class LoginActivity extends AppCompatActivity {
                         siteUrl = loginUrl;
                         Toast.makeText(getApplicationContext(),
                                 "Logged in" + response.toString(), Toast.LENGTH_SHORT).show();
+
                         try {
                             JSONObject json = new JSONObject(response);
                             String fullName = json.getString("full_name");
@@ -1141,6 +1161,8 @@ public class LoginActivity extends AppCompatActivity {
                 return params;
 
             }
+
+
         };
         MySingleton.getInstance(ctx).addToRequestQueue(stringRequest);
     }

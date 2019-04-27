@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -137,9 +138,15 @@ public class ApplicationController {
                                 stDatabase.stDao().addCompnany(company);
 
                             }
+                            if (stDatabase.stDao().getDefaultCompany()==null) {
+                                Company defaultComapany = stDatabase.stDao().getAllCompanies().get(0);
+                                defaultComapany.setIsDefault(1);
+                                stDatabase.stDao().updateCompany(defaultComapany);
+                            }
+
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Toast.makeText(ctx, "Could not parse Company List", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ctx, e.toString(), Toast.LENGTH_SHORT).show();
                         }
                         makeShortToast(ctx, "Company list done!");
                     }
@@ -150,6 +157,8 @@ public class ApplicationController {
             }
         }
         );
+        jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(80000,
+                3,DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
     }
 

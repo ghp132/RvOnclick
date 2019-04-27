@@ -46,6 +46,12 @@ public interface StDao {
     @Insert
     void addCompnany(Company company);
 
+    @Query("select * from Company where isDefault=1")
+    Company getDefaultCompany();
+
+    @Update
+    void updateCompany(Company...companies);
+
     @Query("select * from Company")
     List<Company> getAllCompanies();
 
