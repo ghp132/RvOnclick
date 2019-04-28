@@ -98,8 +98,8 @@ public class LoginActivity extends AppCompatActivity {
 
         if (stDatabase.stDao().countUserConfig() >= 1) {
             fillLoginInfo();
+            siteUrl=stDatabase.stDao().getAllUserConfig().get(0).getLoginUrl();
         }
-
         loginEmail = tvLoginEmail.getText().toString();
         loginPassword = tvLoginPassword.getText().toString();
         loginUrl = tvUrl.getText().toString();
@@ -140,10 +140,10 @@ public class LoginActivity extends AppCompatActivity {
                 saveLoginInfo();
 
                 login(getApplicationContext());
-                if (stDatabase.stDao().countUsers() != 0) {
+                /*if (stDatabase.stDao().countUsers() != 0) {
                     stDatabase.stDao().deleteAllUsers();
                 }
-                getUserConfig(getApplicationContext());
+                getUserConfig(getApplicationContext());*/
 
 
             }
@@ -439,8 +439,10 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 String territory = order.getTerritory();
                 //CustomField sales person to be added in User Doctype
-                String salesPerson = stDatabase.stDao().getUserByEmailId(stDatabase.stDao()
-                        .getAllUserConfig().get(0).getUserId()).getSalesPerson();
+                UserConfig uc=stDatabase.stDao().getAllUserConfig().get(0);
+                String userEmail=uc.getUserId();
+                User u=stDatabase.stDao().getUserByEmailId(userEmail);
+                String salesPerson = u.getSalesPerson();
                 String company = order.getCompanyName();
 
                 info = info + orderId;
@@ -473,6 +475,7 @@ public class LoginActivity extends AppCompatActivity {
                     String itemCode = orderProduct.getProductCode();
                     Double qty = orderProduct.getQty();
                     Double rate = orderProduct.getRate();
+                    String warehouse = orderProduct.getWarehouse();
                     String costCenter = "Main - " + stDatabase.stDao().getAbbrByCompanyName(company);
                     double discountPercentage = orderProduct.getDiscountPercentage();
                     try {
@@ -480,6 +483,8 @@ public class LoginActivity extends AppCompatActivity {
                         jsonObject.put("qty", qty);
                         jsonObject.put("rate", rate);
                         jsonObject.put("discount_percentage", discountPercentage);
+                        jsonObject.put("warehouse", warehouse);
+                        jsonObject.put("cost_center",costCenter);
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -547,7 +552,22 @@ public class LoginActivity extends AppCompatActivity {
                         error.printStackTrace();
                         responseCounter += 1;
                         handleProgressBar();
-                        Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "Sales Invoice: "+error.toString(), Toast.LENGTH_SHORT).show();
+
+                        if (error.networkResponse.data!=null){
+                            String body = "";
+                            try{
+                                body = new String(error.networkResponse.data,"UTF-8");
+                                //tvResponseDisplay.setText(body);
+                                Log.d(TAG, "onErrorResponse: postOrders" + body);
+                            }catch (UnsupportedEncodingException e){
+                                e.printStackTrace();
+                                Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+
+
+                            }
+                        }
+
                         //textView.setText(error.toString());
                     }
                 }
@@ -795,6 +815,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void onResponse(JSONObject response) {
                         try {
                             JSONArray json = response.getJSONArray("data");
+                            //Log.d(TAG, "onResponse: syncItems: response" + response.toString());
 
                             for (int i = 0; i < json.length(); i++) {
                                 JSONObject item = (JSONObject) json.get(i);
@@ -811,6 +832,10 @@ public class LoginActivity extends AppCompatActivity {
                                 String product_group = item.getString("item_group");
                                 String product_rate = item.getString("standard_rate");
                                 String company = item.getString("company");
+                                Log.d(TAG, "onResponse: syncItems: Items:" + product_code + "Company" + company);
+                                if (company.equals("MJ Farms")){
+                                    int x = 1;
+                                }
 
 
                                 Product product = new Product();
@@ -965,20 +990,21 @@ public class LoginActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                String body="";
+                String body=error.toString();
                 error.printStackTrace();
                 responseCounter += 1;
                 handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Error in receiving Customer JSON", Toast.LENGTH_SHORT).show();
-                tvResponseDisplay.setText("syncCustomerError");
+                //tvResponseDisplay.setText("syncCustomerError");
                 if (error.networkResponse.data!=null){
                     try{
                         body = new String(error.networkResponse.data,"UTF-8");
+                        tvResponseDisplay.setText(body);
+                        Log.d(TAG, "onErrorResponse: SyncCustomer" + body);
                     }catch (UnsupportedEncodingException e){
                         e.printStackTrace();
                         Toast.makeText(ctx, "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
-                        tvResponseDisplay.setText(body);
-                        Log.d(TAG, "onErrorResponse: SyncCustomer" + body);
+
 
                     }
                 }
@@ -1007,6 +1033,9 @@ public class LoginActivity extends AppCompatActivity {
                                 result = results.getJSONArray(i);
                                 String str = result.getString(0);
                                 product = stDatabase.stDao().getProductByProductCode(result.getString(0));
+                                if(product==null){
+                                    int x=1;
+                                }
                                 product.setStock(result.getDouble(13));
                                 stDatabase.stDao().updateProduct(product);
                                 sb.append(result.getString(0));
@@ -1143,6 +1172,11 @@ public class LoginActivity extends AppCompatActivity {
 
                         responseCounter += 1;
                         handleProgressBar();
+                        //login(getApplicationContext());
+                        if (stDatabase.stDao().countUsers() != 0) {
+                            stDatabase.stDao().deleteAllUsers();
+                        }
+                        getUserConfig(getApplicationContext());
                     }
                 }, new Response.ErrorListener() {
             @Override

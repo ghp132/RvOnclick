@@ -12,8 +12,16 @@ public class OrderProduct{
     private long orderId, parentId, childId;
     private String productCode;
     private double qty;
-    private String companyName;
+    private String companyName,warehouse;
     private double rate, discountPercentage;
+
+    public String getWarehouse() {
+        return warehouse;
+    }
+
+    public void setWarehouse(String warehouse) {
+        this.warehouse = warehouse;
+    }
 
     public double getDiscountPercentage() {
         return discountPercentage;

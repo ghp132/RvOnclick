@@ -200,11 +200,14 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         ApplicationController ac = new ApplicationController();
         Product product = stDatabase.stDao().getProductByProductCode(prodCode);
         String companyName = getCompanyName(prodCode);
+        String abbr = stDatabase.stDao().getAbbrByCompanyName(companyName);
+        String warehouse = "Stores - " + abbr;
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.setOrderId(orderId);
         orderProduct.setProductCode(prodCode);
         orderProduct.setQty(qty);
         orderProduct.setRate(rate);
+        orderProduct.setWarehouse(warehouse);
 
         orderProduct.setCompanyName(companyName);
 
