@@ -593,7 +593,7 @@ public class LoginActivity extends AppCompatActivity {
 
 
         final List<Payment> unknownPayments = stDatabase.stDao().getPaymentByPaymentStatus(0);
-        final int pageLimitLength = 5;
+        final int pageLimitLength = 1000;
 
         url = loginUrl + "/api/resource/Payment%20Entry?fields=[\"name\",\"app_payment_id\",\"docstatus\"]&limit_page_length=" + pageLimitLength;
         requestQueue = Volley.newRequestQueue(LoginActivity.this);
@@ -1033,11 +1033,12 @@ public class LoginActivity extends AppCompatActivity {
                                 result = results.getJSONArray(i);
                                 String str = result.getString(0);
                                 product = stDatabase.stDao().getProductByProductCode(result.getString(0));
-                                if(product==null){
-                                    int x=1;
+                                if(product!=null){
+                                    //product might be null if permission not granted for user
+                                    product.setStock(result.getDouble(13));
+                                    stDatabase.stDao().updateProduct(product);
+
                                 }
-                                product.setStock(result.getDouble(13));
-                                stDatabase.stDao().updateProduct(product);
                                 sb.append(result.getString(0));
                                 sb.append("\n");
                                 sb.append(result.getDouble(13));

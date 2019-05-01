@@ -38,6 +38,8 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     TextView tvOrderInfo;
     private int orderStatus;
     ApplicationController ac = new ApplicationController();
+    boolean shouldBeRefreshed;
+    boolean dbCreated=false;
 
 
     public CustomerTransactionOrderFragment() {
@@ -57,6 +59,7 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
+        dbCreated=true;
         orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
         tvOrderInfo.setText(String.valueOf(orderTotalValue));
 
@@ -87,7 +90,15 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
             recyclerView.setAdapter(productAdapter);
             recyclerView.setItemAnimator(new DefaultItemAnimator());
         }
+
+        if (shouldBeRefreshed){
+            refreshFragment();
+            shouldBeRefreshed=false;
+        }
+
         return view;
+
+
     }
 
     @Override
@@ -211,8 +222,18 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+        //stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
+          //      .allowMainThreadQueries().build();
         if (isVisibleToUser) {
-            getFragmentManager().beginTransaction().detach(this).attach(this).commit();
+
+            if (dbCreated){
+                refreshFragment();
+            }
+            shouldBeRefreshed=true;
+            //stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(),StDatabase.class,"StDb").allowMainThreadQueries().build();
+            /*getFragmentManager().beginTransaction().detach(this).attach(this).commit();
+            orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
+            tvOrderInfo.setText(String.valueOf(Math.round(orderTotalValue)));*/
         }
     }
 
@@ -220,5 +241,12 @@ public class CustomerTransactionOrderFragment extends Fragment implements OrderP
         productList.clear();
         productList.addAll(stDatabase.stDao().getOrderProductsById(orderId));
         productAdapter.notifyDataSetChanged();
+    }
+
+
+    private void refreshFragment(){
+        getFragmentManager().beginTransaction().detach(this).attach(this).commit();
+        orderTotalValue = stDatabase.stDao().getOrderTotalValueByOrderId(orderId);
+        tvOrderInfo.setText(String.valueOf(Math.round(orderTotalValue)));
     }
 }
