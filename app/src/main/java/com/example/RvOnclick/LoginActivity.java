@@ -401,6 +401,7 @@ public class LoginActivity extends AppCompatActivity {
                 info = info + jsonObjPayment.toString() + "\n\n";
                 TextView textView = findViewById(R.id.tv_responseDisplay);
                 textView.setText(info);
+
             }
         }
 
