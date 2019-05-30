@@ -20,6 +20,15 @@ public class Order {
     private String appOrderId;
     private String orderNumber;
     private String priceListName;
+    private double paidAmt;
+
+    public double getPaidAmt() {
+        return paidAmt;
+    }
+
+    public void setPaidAmt(double paidAmt) {
+        this.paidAmt = paidAmt;
+    }
 
     public String getTerritory() {
         return territory;

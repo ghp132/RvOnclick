@@ -28,6 +28,9 @@ public interface StDao {
     @Insert
     public Long createInvoice (Invoice invoice);
 
+    @Update
+    void updateInvoice(Invoice... invoices);
+
     @Insert
     public Long makePayment (Payment payment);
 

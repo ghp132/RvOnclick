@@ -8,9 +8,9 @@
     android:focusable="true"
     android:orientation="vertical"
     android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/row_padding_vertical"
+    android:paddingTop="@dimen/old_row_padding_vertical"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingBottom="@dimen/row_padding_vertical">
+    android:paddingBottom="@dimen/old_row_padding_vertical">
 
     <TextView
         android:id="@+id/tvProductName"
@@ -18,6 +18,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
+        android:singleLine="false"
         android:textColor="@color/productName"
         android:textSize="16dp"
         android:textStyle="bold" />
@@ -29,6 +30,7 @@
         android:layout_below="@+id/tvProductName"
         android:layout_alignParentEnd="true"
         android:layout_marginTop="1dp"
+
         android:layout_marginEnd="0dp">
 
         <TextView
@@ -45,9 +47,10 @@
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
+            android:layout_marginStart="3dp"
             android:layout_marginTop="0dp"
             android:layout_marginEnd="0dp"
-            android:text="TextView" />
+            android:layout_toEndOf="@+id/tvOrder" />
 
         <TextView
             android:id="@+id/tvOrder"

@@ -6,10 +6,10 @@
     android:clickable="true"
     android:focusable="true"
     android:orientation="vertical"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/row_padding_vertical"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingBottom="@dimen/row_padding_vertical">
+    android:paddingLeft="@dimen/old_activity_horizontal_margin"
+    android:paddingTop="@dimen/old_row_padding_vertical"
+    android:paddingRight="@dimen/old_activity_horizontal_margin"
+    android:paddingBottom="@dimen/old_row_padding_vertical">
 
     <TextView
         android:id="@+id/tvCustomerName"

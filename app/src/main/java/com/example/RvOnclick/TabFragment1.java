@@ -1,39 +1,22 @@
 package com.example.RvOnclick;
 
 
-import android.Manifest;
 import android.arch.persistence.room.Room;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
-import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.SettingsClient;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +91,7 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
                 searchableList = stDatabase.stDao().getCustomer();
                 for (Customer customer : searchableList) {
                     String searchString;
-                    if (customer.getDisplay_name() == null) {
+                    if (customer.getDisplay_name() == null || customer.getDisplay_name().equals("null")) {
                         searchString = customer.getCustomer_id().toLowerCase();
                     } else {
                         searchString = customer.getCustomer_id().toLowerCase();

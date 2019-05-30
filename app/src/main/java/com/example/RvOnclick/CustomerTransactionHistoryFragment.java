@@ -2,11 +2,13 @@ package com.example.RvOnclick;
 
 
 import android.arch.persistence.room.Room;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,8 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import static com.example.RvOnclick.ApplicationController.TAG;
 
 
 /**
@@ -26,7 +30,10 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
     protected String custCode;
     public List<Invoice> invoiceList;
     private InvoiceAdapter.OnItemClickListener listener;
-
+    RecyclerView recyclerView;
+    InvoiceAdapter invoiceAdapter;
+    boolean dbCreated = false;
+    boolean refresh = false;
 
     public CustomerTransactionHistoryFragment() {
         // Required empty public constructor
@@ -44,25 +51,30 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
+        dbCreated = true;
         invoiceList = stDatabase.stDao().getOutstandingInvoicesByCustomerCode(custCode);
 
-        if (invoiceList.isEmpty()) {
-            return view;
-        } else {
+        if (!invoiceList.isEmpty()) {
+            //return view;
+            //} else {
             Collections.sort(invoiceList, new Comparator<Invoice>() {
                 @Override
                 public int compare(Invoice o1, Invoice o2) {
                     return o1.getInvoiceDate().compareToIgnoreCase(o2.getInvoiceDate());
                 }
             });
-            RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.invoice_recyclerview);
-            recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-            listener = this;
-            InvoiceAdapter invoiceAdapter = new InvoiceAdapter(listener, invoiceList, getActivity());
-            recyclerView.setAdapter(invoiceAdapter);
-            recyclerView.setItemAnimator(new DefaultItemAnimator());
-            return view;
         }
+        recyclerView = view.findViewById(R.id.invoice_recyclerview);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        listener = this;
+        invoiceAdapter = new InvoiceAdapter(listener, invoiceList, getActivity());
+        recyclerView.setAdapter(invoiceAdapter);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        if (refresh) {
+            refreshRecyclerView();
+        }
+        return view;
+        //}
     }
 
     @Override
@@ -87,5 +99,37 @@ public class CustomerTransactionHistoryFragment extends Fragment implements Invo
         }
     }
 
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+
+        super.setUserVisibleHint(isVisibleToUser);
+        Log.d(TAG, "setUserVisibleHint: overridden");
+        if (isVisibleToUser) {
+            if (dbCreated) {
+                refreshRecyclerView();
+                refresh = true;
+                Log.d(TAG, "setUserVisibleHint: true");
+                showNewPaymentFragment();
+
+
+            } else {
+                refresh = true;
+            }
+
+        }
+    }
+
+    private void refreshRecyclerView() {
+        invoiceList = stDatabase.stDao().getOutstandingInvoicesByCustomerCode(custCode);
+        invoiceAdapter.notifyDataSetChanged();
+    }
+
+
+    private void showNewPaymentFragment() {
+        Intent m2aIntent = new Intent(getActivity(), Main2Activity.class);
+        m2aIntent.putExtra("custCode", custCode);
+        m2aIntent.putExtra("fragment", com.example.RvOnclick.Utils.CUSTOMER_OUTSTANDING_LIST_FRAGMENT);
+        getActivity().startActivity(m2aIntent);
+    }
 
 }

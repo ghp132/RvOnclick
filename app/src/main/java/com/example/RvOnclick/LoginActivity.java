@@ -1,16 +1,13 @@
 package com.example.RvOnclick;
 
-import android.app.ProgressDialog;
+import android.app.AlertDialog;
 import android.arch.persistence.room.Room;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
-import android.provider.Telephony;
 import android.support.v7.app.AppCompatActivity;
-import android.telephony.SmsManager;
-import android.telephony.SubscriptionInfo;
-import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -19,7 +16,6 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -39,7 +35,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.net.HttpCookie;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -89,6 +84,7 @@ public class LoginActivity extends AppCompatActivity {
         tvUrl = findViewById(R.id.tv_url);
         stDatabase = Room.databaseBuilder(getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().fallbackToDestructiveMigration().build();
+        //ac.pay4sms(this,"f9c537bc392449647a2055b008cc346b",1,"message from volley","9092747505");
 
 
         CookieManager manager = new CookieManager();
@@ -428,7 +424,7 @@ public class LoginActivity extends AppCompatActivity {
             responseCounter += 1;
             handleProgressBar();
         } else {
-            for (Order order : unsycedOrderList) {
+            for (final Order order : unsycedOrderList) {
                 JSONArray salesTeamArray = new JSONArray();
 
                 info = info + "\n\n";
@@ -532,11 +528,16 @@ public class LoginActivity extends AppCompatActivity {
                                 //adding erpnext Order number to the order database table
                                 JSONObject rJson;
                                 try {
-                                    rJson = response.getJSONObject("Data");
+                                    rJson = response.getJSONObject("data");
                                     String orderNumber = rJson.getString("name");
                                     stDatabase.stDao().updateOrderNumber(orderNumber, orderId);
                                     stDatabase.stDao().updateOrderStatus(1, orderId);
+                                    ac.createPaymentFromOrder(orderId, stDatabase);
                                     Toast.makeText(getApplicationContext(), orderNumber, Toast.LENGTH_SHORT).show();
+
+                                    Invoice newInvoice = ac.parseInvoiceJson(rJson);
+                                    newInvoice.setPaidAmount(order.getPaidAmt());
+                                    stDatabase.stDao().createInvoice(newInvoice);
 
 
                                 } catch (JSONException je) {
@@ -555,17 +556,19 @@ public class LoginActivity extends AppCompatActivity {
                         handleProgressBar();
                         Toast.makeText(getApplicationContext(), "Sales Invoice: "+error.toString(), Toast.LENGTH_SHORT).show();
 
-                        if (error.networkResponse.data!=null){
-                            String body = "";
-                            try{
-                                body = new String(error.networkResponse.data,"UTF-8");
-                                //tvResponseDisplay.setText(body);
-                                Log.d(TAG, "onErrorResponse: postOrders" + body);
-                            }catch (UnsupportedEncodingException e){
-                                e.printStackTrace();
-                                Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                        if (error.networkResponse != null) {
+                            if (error.networkResponse.data != null) {
+                                String body = "";
+                                try {
+                                    body = new String(error.networkResponse.data, "UTF-8");
+                                    //tvResponseDisplay.setText(body);
+                                    Log.d(TAG, "onErrorResponse: postOrders" + body);
+                                } catch (UnsupportedEncodingException e) {
+                                    e.printStackTrace();
+                                    Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
 
 
+                                }
                             }
                         }
 
@@ -582,10 +585,36 @@ public class LoginActivity extends AppCompatActivity {
 
 
     public void deleteOrders(View view) {
-        stDatabase.stDao().deleteAllOrderProducts();
-        stDatabase.stDao().deleteAllOrders();
-        TextView textView = findViewById(R.id.tv_responseDisplay);
+
         //textView.setText("");
+
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle("Delete All Orders?")
+                .setMessage("Deleted orders cannot be recovered.")
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+
+                        stDatabase.stDao().deleteAllOrderProducts();
+                        stDatabase.stDao().deleteAllOrders();
+                        TextView textView = findViewById(R.id.tv_responseDisplay);
+
+                    }
+                })
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+
+
     }
 
     public void updateUnknownPaymentStatuses(String loginUrl, Context ctx) {
@@ -719,12 +748,14 @@ public class LoginActivity extends AppCompatActivity {
                                             order.setOrderStatus(2);
                                             order.setOrderNumber(orderNumber);
                                             stDatabase.stDao().updateOrder(order);
+                                            ac.updatePaymentFromOrder(order.getOrderId(), stDatabase);
 
                                             break;
                                         } else {
                                             order.setOrderStatus(1);
                                             order.setOrderNumber(orderNumber);
                                             stDatabase.stDao().updateOrder(order);
+                                            ac.updatePaymentFromOrder(order.getOrderId(), stDatabase);
                                             break;
                                         }
                                     } else {
@@ -1187,6 +1218,21 @@ public class LoginActivity extends AppCompatActivity {
                 responseCounter += 1;
                 handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Cannot login.", Toast.LENGTH_SHORT).show();
+
+                if (error.networkResponse != null) {
+                    if (error.networkResponse.data != null) {
+                        String body;
+                        try {
+                            body = new String(error.networkResponse.data, "UTF-8");
+                            //tvResponseDisplay.setText(body);
+                            Log.d(TAG, "onErrorResponse: postOrders" + body);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+
             }
         }) {
             @Override
@@ -1396,7 +1442,7 @@ public class LoginActivity extends AppCompatActivity {
 
 
     public void getUserConfig(final Context ctx) {
-        String url = loginUrl + "/api/resource/User/?fields=[\"email\",\"full_name\",\"send_sms_from_mobile\",\"can_edit_rate\",\"sales_person\"]";
+        String url = loginUrl + "/api/resource/User%20Config/?fields=[\"user\",\"full_name\",\"send_sms_from_mobile\",\"can_edit_rate\",\"sales_person\"]";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
@@ -1408,11 +1454,11 @@ public class LoginActivity extends AppCompatActivity {
                             data = response.getJSONArray("data");
                             for (int i = 0; i < data.length(); i++) {
                                 jsonObject = data.getJSONObject(i);
-                                String email = jsonObject.getString("email");
+                                String email = jsonObject.getString("user");
                                 int sendSms = jsonObject.getInt("send_sms_from_mobile");
                                 int allowRateChange = jsonObject.getInt("can_edit_rate");
                                 String salesPerson = jsonObject.getString("sales_person");
-                                String emailId = jsonObject.getString("email");
+                                String emailId = jsonObject.getString("user");
                                 String fullName = jsonObject.getString("full_name");
                                 User user = new User();
                                 user.setCanEditRate(allowRateChange);
@@ -1450,6 +1496,63 @@ public class LoginActivity extends AppCompatActivity {
         });
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
     }
+
+    /*public void getAddress(final Context ctx) {
+        String url = loginUrl + "/api/resource/Address?filters=[[\"Address\",\"is_your_company_address\",\"=\",\"1\"]]";
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                Request.Method.GET, url, null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        tvResponseDisplay.setText(response.toString());
+                        JSONArray data = new JSONArray();
+                        JSONObject jsonObject = new JSONObject();
+                        try {
+                            data = response.getJSONArray("data");
+                            for (int i = 0; i < data.length(); i++) {
+                                jsonObject = data.getJSONObject(i);
+                                String email = jsonObject.getString("user");
+                                int sendSms = jsonObject.getInt("send_sms_from_mobile");
+                                int allowRateChange = jsonObject.getInt("can_edit_rate");
+                                String salesPerson = jsonObject.getString("sales_person");
+                                String emailId = jsonObject.getString("user");
+                                String fullName = jsonObject.getString("full_name");
+                                User user = new User();
+                                user.setCanEditRate(allowRateChange);
+                                user.setEmailId(emailId);
+                                user.setFullName(fullName);
+                                user.setSendSms(sendSms);
+                                user.setSalesPerson(salesPerson);
+                                stDatabase.stDao().addUser(user);
+                                if (email.equals(loginEmail)) {
+                                    List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
+                                    UserConfig userConfig = userConfigList.get(0);
+                                    userConfig.setSendSms(sendSms);
+                                    userConfig.setAllowRateChange(allowRateChange);
+                                    userConfig.setSalesPerson(salesPerson);
+                                    stDatabase.stDao().updateUserConfig(userConfig);
+                                    Toast.makeText(ctx, "Fetched UserConfig.", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(), "Error in parsing UserConfig", Toast.LENGTH_SHORT).show();
+
+                        }
+                        responseCounter += 1;
+                        handleProgressBar();
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(ctx, "Eror in fetching UserConfig", Toast.LENGTH_SHORT).show();
+                responseCounter += 1;
+                handleProgressBar();
+            }
+        });
+        MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
+    }*/
 
 
     public int countChar(String str, char c) {

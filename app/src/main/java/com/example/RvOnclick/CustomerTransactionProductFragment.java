@@ -3,7 +3,6 @@ package com.example.RvOnclick;
 
 import android.app.ProgressDialog;
 import android.arch.persistence.room.Room;
-import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -76,6 +75,7 @@ ApplicationController.OnPriceProcessedListener{
 
         }
         productSearchBox = view.findViewById(R.id.et_productSearch);
+        productSearchBox.requestFocus();
 
 
         productList = stDatabase.stDao().getEnabledProducts(false);

@@ -31,7 +31,7 @@ public class CustomerAdapter extends RecyclerView.Adapter<CustomerAdapter.CustVi
     public void onBindViewHolder(@NonNull CustomerAdapter.CustViewHolder custViewHolder, int i) {
         Customer customer = customerList.get(i);
         String customerName;
-        if (customer.getDisplay_name()==null){
+        if (customer.getDisplay_name() == null || customer.getDisplay_name().equals("null")) {
             customerName = customer.getCustomer_id();
         } else {
             customerName=customer.getDisplay_name();
