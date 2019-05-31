@@ -266,14 +266,14 @@ ApplicationController.OnPriceProcessedListener{
 
     private class UpdateCurrentOrderQty extends AsyncTask<String, Integer, String> {
         List<Product> at1ProductList;
-
+        int positionOfProduct;
         public UpdateCurrentOrderQty(List<Product> at1ProductList) {
             this.at1ProductList = at1ProductList;
         }
 
         @Override
         protected String doInBackground(String... strings) {
-
+            //int positionOfProduct;
             List<OrderProduct> orderProducts = stDatabase.stDao().getOrderProductsById(orderId);
             for (OrderProduct op : orderProducts) {
                 String orderProdCode = op.getProductCode();
@@ -283,7 +283,7 @@ ApplicationController.OnPriceProcessedListener{
                         //child item will be skipped from looping once again through the product list
                         //child item will loop through the order item to get freeQty and update the item
                         double qty = op.getQty();
-                        int positionOfProduct = at1ProductList.indexOf(product);
+                        positionOfProduct = at1ProductList.indexOf(product);
                         product.setCurrentOrderQty(qty);
                         stDatabase.stDao().updateProduct(product);
                         if (op.getChildId() != 0) {
@@ -300,7 +300,19 @@ ApplicationController.OnPriceProcessedListener{
                             }
                         }
                         //itemProcessedListener2.onItemProcessed(product,positionOfProduct);
-                        onProgressUpdate(positionOfProduct);
+                        try {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onProgressUpdate(positionOfProduct);
+                                }
+                            });
+                            //onProgressUpdate(positionOfProduct);
+                        } catch (NullPointerException e) {
+                            Log.d(TAG, "doInBackground: calling onProgressUpdate");
+                            e.printStackTrace();
+                        }
+                        //onProgressUpdate(positionOfProduct);
                         break;
                     }
                 }
