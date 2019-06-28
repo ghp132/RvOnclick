@@ -28,6 +28,9 @@ public interface StDao {
     @Insert
     public Long createInvoice (Invoice invoice);
 
+    @Query("select * from Invoice where orderId =:id")
+    public Invoice getInvoiceByOrderId(Long id);
+
     @Update
     void updateInvoice(Invoice... invoices);
 
@@ -63,6 +66,9 @@ public interface StDao {
 
     @Query("select abbr from Company where companyName = :companyName")
     String getAbbrByCompanyName(String companyName);
+
+    @Query("select salesInvoice_NamingSeries from Company where companyName = :companyName")
+    String getSINamingSeries(String companyName);
 
     @Query("select * from TblSettings")
     public List<TblSettings> getAllSettings();
@@ -160,6 +166,9 @@ public interface StDao {
 
     @Delete
     void deletePayment(Payment...payment);
+
+    @Query("delete from Invoice where orderId = :id")
+    void deleteInvoiceByOrderId(Long id);
 
 
     @Query("update 'Order' set orderNumber = :orderNumber where orderId = :id")
@@ -303,5 +312,36 @@ public interface StDao {
     @Query("select * from User where emailId = :email")
     User getUserByEmailId(String email);
 
+    @Insert
+    void addTerritory(Territory territory);
 
+    @Query("select * from Territory where isGroup=:isGroup")
+    List<Territory> getTerritoriesByType(boolean isGroup);
+
+    @Query("select count(*) from Territory")
+    int countTerritory();
+
+    @Query("delete from Territory")
+    void deleteAllTerritories();
+
+    @Insert
+    void addErrorRecord(VolleyErrorRecord errorRecord);
+
+    @Query("select * from VolleyErrorRecord")
+    List<VolleyErrorRecord> getAllVolleyErrorRecords();
+
+    @Query("select * from VolleyErrorRecord where errorId=:id")
+    VolleyErrorRecord getVolleyErrorRecordById(Long id);
+
+    @Query("delete from VolleyErrorRecord")
+    void deleteAllErrorRecords();
+
+    @Insert
+    void addBrand(Brand... brand);
+
+    @Query("select count(*) from Brand")
+    int countBrands();
+
+    @Query("select * from Brand")
+    List<Brand> getAllBrands();
 }

@@ -16,8 +16,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.android.volley.toolbox.JsonObjectRequest;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,9 +32,10 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     TextView tv;
     Button btProductSave, btIncrease, btDecrease, btCancel;
     EditText etQty, etRate, etFreeQty;
-    public static StDatabase stDatabase;
-    public String custCode, priceListName, territory;
-    public long orderId;
+    private static StDatabase stDatabase;
+    private String custCode, priceListName, territory;
+    private long orderId, invoiceId;
+    private double orderTotal;
     ApplicationController ac = new ApplicationController();
 
     public DialogFragment_ProductRateInfo() {
@@ -108,7 +107,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
                             //passing parentId instead of childId to delete both parent and child.
                             existingId = orderProduct.getParentId();
                         }
-                        ac.deleteOrderProduct(existingId,stDatabase);
+                        ac.deleteOrderProduct(getActivity(), existingId, stDatabase, 2);
                     }
                        long parentId = AddProductToOrder(orderId, prodCode, qty, rate);
 
@@ -192,7 +191,23 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
             this.orderId = stDatabase.stDao().createOrder(order);
             String appOrderId = ts + this.orderId + "R";
             stDatabase.stDao().updateAppOrderId(appOrderId, this.orderId);
+            createNewInvoiceIfNotExists(this.orderId);
         }
+    }
+
+    public void createNewInvoiceIfNotExists(long orderId) {
+
+        Invoice invoice = new Invoice();
+        invoice.setCustomer(custCode);
+        invoice.setDocStatus(Utils.DOC_STATUS_UNATTEMPTED);
+        invoice.setOrderId(orderId);
+        invoice.setGrandTotal(orderTotal);
+        invoice.setOutstanding(orderTotal);
+        invoice.setInvoiceDate(ac.getCurrentDate());
+        invoice.setPaidAmount(0.0);
+        invoice.setInvoiceNumber("Unsynced" + orderId);
+        invoiceId = stDatabase.stDao().createInvoice(invoice);
+
     }
 
     //Adds items to the order in OrderProduct database table
@@ -212,27 +227,15 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         orderProduct.setCompanyName(companyName);
 
         long parentId = stDatabase.stDao().addProductToOrder(orderProduct);
+
         ac.updateCurrentOrderQty(orderId, stDatabase);
 
-        /*Boolean notPresent = true;
-        //check to see if the product is already present in the order
-        List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
-        for (OrderProduct op : orderProductList) {
-            if (op.getProductCode().equals(prodCode)) {
-                int orderProductId = op.getOrderProductId();
-                stDatabase.stDao().updateOrderProductById(qty, rate, orderProductId);
-                notPresent = false;
-                ac.updateCurrentOrderQty(orderId,stDatabase);
-                break;
-            }
-        }
-        if (notPresent) {
-            //Company company = stDatabase.stDao().getCompanyByCompanyName()
-            //orderProduct = createGstJsonArray()
-            stDatabase.stDao().addProductToOrder(orderProduct);
-            ac.updateCurrentOrderQty(orderId, stDatabase);
-        }*/
-
+        //updating invoice grand total after adding each item
+        orderTotal = Math.round(stDatabase.stDao().getOrderTotalValueByOrderId(orderId));
+        Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+        invoice.setGrandTotal(orderTotal);
+        invoice.setOutstanding(orderTotal);
+        stDatabase.stDao().updateInvoice(invoice);
         return parentId;
     }
 
@@ -268,6 +271,12 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     public void deleteOrder(Long orderId) {
         stDatabase.stDao().deleteOrderByOrderId(orderId);
         stDatabase.stDao().deleteOrderProductByOrderId(orderId);
+        Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+        int invoiceStatus = invoice.getDocStatus();
+        if (invoiceStatus == Utils.DOC_STATUS_UNATTEMPTED) {
+            stDatabase.stDao().deleteInvoiceByOrderId(orderId);
+        }
+
     }
 
     public JSONArray createGstJsonArray(Company company, Context ctx){

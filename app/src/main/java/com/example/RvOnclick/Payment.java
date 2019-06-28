@@ -16,9 +16,18 @@ public class Payment {
     private String chequeNo;
     private String chequeDate;
     private String chequeBank;
-    //ERPNext Payment number
+    //ERPNext PaymentCreator number
     private String paymentNumber;
     private String company;
+    private Long orderId;
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
 
     public String getCompany() {
         return company;

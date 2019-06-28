@@ -11,7 +11,16 @@ public class Company {
     private String companyName;
     private String abbr;
     int isDefault;
-    String address_line1, address_line2, city, phone, gstin, address;
+    String address_line1, address_line2, city, phone, gstin, address,
+            salesInvoice_NamingSeries;
+
+    public String getSalesInvoice_NamingSeries() {
+        return salesInvoice_NamingSeries;
+    }
+
+    public void setSalesInvoice_NamingSeries(String salesInvoice_NamingSeries) {
+        this.salesInvoice_NamingSeries = salesInvoice_NamingSeries;
+    }
 
     public String getAddress() {
         return address;

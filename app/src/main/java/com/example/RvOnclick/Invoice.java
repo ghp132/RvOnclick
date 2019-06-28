@@ -5,8 +5,6 @@ import android.arch.persistence.room.Index;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
-import org.json.JSONObject;
-
 @Entity(indices = {@Index(value = {"invoiceNumber"},unique = true)})
 public class Invoice {
     @PrimaryKey(autoGenerate = true)
@@ -23,6 +21,24 @@ public class Invoice {
     private String invoiceDate;
     private Double paidAmount;
     private String invoiceItems;
+    private int docStatus;
+    private Long orderId;
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
+
+    public int getDocStatus() {
+        return docStatus;
+    }
+
+    public void setDocStatus(int docStatus) {
+        this.docStatus = docStatus;
+    }
 
     public String getInvoiceItems() {
         return invoiceItems;

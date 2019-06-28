@@ -41,7 +41,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
     Payment payment = new Payment();
     Payment paidAmt = new Payment();
     Integer mYear, mMonth, mDay;
-    Long paymentId, oldPaymentid;
+    Long paymentId, oldPaymentid, orderId;
     Boolean previouslyPaid;
     ApplicationController ac = new ApplicationController();
     int smsPermissionGranted;
@@ -61,6 +61,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
         custCode = getActivity().getIntent().getStringExtra("custCode");
         invoiceNo = getActivity().getIntent().getStringExtra("invoiceNo");
         company = getActivity().getIntent().getStringExtra("company");
+        orderId = getActivity().getIntent().getLongExtra("orderId", 0);
         String str = getActivity().getIntent().getStringExtra("outstanding");
         outstanding = Double.parseDouble(getActivity().getIntent().getStringExtra("outstanding"));
         getActivity().getIntent().putExtra("deletePayment",0);//will be set to 1 when delete is clicked
@@ -161,9 +162,14 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                             payment.setChequeNo(chequeNo);
                             payment.setCustomerCode(custCode);
                             payment.setInvoiceNo(invoiceNo);
+                            if (orderId != 0) {
+                                payment.setOrderId(orderId);
+                            }
                             payment.setCompany(company);
                             payment.setChequePayment(true);
                             payment.setPaymentStatus(-1);
+                            updatePaidAmtInInvoice();
+
 
                             if (previouslyPaid){
                                 payment.setPaymentId(oldPaymentid);
@@ -190,6 +196,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
                         payment.setPaymentStatus(-1);
                         payment.setCompany(company);
                         payment.setChequePayment(false);
+                        updatePaidAmtInInvoice();
 
                         if (previouslyPaid){
                             payment.setPaymentId(oldPaymentid);
@@ -306,5 +313,11 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
 
     }
 
+    private void updatePaidAmtInInvoice() {
+        Invoice invoice = stDatabase.stDao().getInvoiceByInvoiceNo(invoiceNo);
+        invoice.setPaidAmount(paymentAmt);
+        stDatabase.stDao().updateInvoice(invoice);
+        //Todo: clear paidAmt after syncing
 
+    }
 }

@@ -30,7 +30,7 @@ public class CustomerTransactionActivity extends AppCompatActivity {
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout_product);
         tabLayout.addTab(tabLayout.newTab().setText("Items"));
         tabLayout.addTab(tabLayout.newTab().setText("Orders"));
-        tabLayout.addTab(tabLayout.newTab().setText("History"));
+        //tabLayout.addTab(tabLayout.newTab().setText("History"));
 
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
 

@@ -30,7 +30,11 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.InvViewH
     @Override
     public void onBindViewHolder(@NonNull InvoiceAdapter.InvViewHolder invViewHolder, int i) {
         Invoice invoice = invoiceList.get(i);
-        invViewHolder.tvInvoiceNumber.setText(invoice.getInvoiceNumber());
+        if (invoice.getDocStatus() == -1) {
+            invViewHolder.tvInvoiceNumber.setText("Unsynced " + invoice.getOrderId());
+        } else {
+            invViewHolder.tvInvoiceNumber.setText(invoice.getInvoiceNumber());
+        }
         invViewHolder.tvPaid.setText(Double.toString(invoice.getPaidAmount()));
         invViewHolder.tvGrandTotal.setText(Double.toString(invoice.getGrandTotal()));
         invViewHolder.tvOutstanding.setText(Double.toString(invoice.getOutstanding()));

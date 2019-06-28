@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.support.v4.app.ActivityCompat;
@@ -21,6 +22,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.RvOnclick.Dialogs.InfoDialog;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,6 +52,17 @@ public class ApplicationController {
             @Override
             public int compare(Customer o1, Customer o2) {
                 return o1.getCustomer_name().compareToIgnoreCase(o2.getCustomer_name());
+            }
+        });
+        return sortList;
+    }
+
+    public List<Territory> sortTerritoryList(List<com.example.RvOnclick.Territory> sortList) {
+        //sorts territory list
+        Collections.sort(sortList, new Comparator<com.example.RvOnclick.Territory>() {
+            @Override
+            public int compare(com.example.RvOnclick.Territory o1, com.example.RvOnclick.Territory o2) {
+                return o1.getTerritoryName().compareToIgnoreCase(o2.getTerritoryName());
             }
         });
         return sortList;
@@ -137,11 +150,13 @@ public class ApplicationController {
                                 String abbr = cList.getString("abbr");
                                 int isDefault = cList.getInt("is_default");
                                 String addressName = cList.getString("stockem_address");
+                                String sINamingSeries = cList.getString("sales_invoice_naming_series");
 
                                 Company company = new Company();
                                 company.setCompanyName(companyName);
                                 company.setAbbr(abbr);
                                 company.setIsDefault(isDefault);
+                                company.setSalesInvoice_NamingSeries(sINamingSeries);
                                 stDatabase.stDao().addCompnany(company);
                                 getCompanyAddress(siteUrl, ctx, stDatabase, addressName, companyName);
 
@@ -278,9 +293,44 @@ public class ApplicationController {
 
 
         }
-
+        updateAndCreateInvoicesIfNotExists(orderIdList, stDatabase);
         return orderIdList;
     }
+
+    private List<Long> updateAndCreateInvoicesIfNotExists(List<Long> orderIdList, StDatabase stDatabase) {
+        List<Long> invoiceIdList = new ArrayList<>();
+        for (long orderId : orderIdList) {
+            Order order = stDatabase.stDao().getOrderByOrderId(orderId);
+            double grandTotal = Math.round(stDatabase.stDao().getOrderTotalValueByOrderId(orderId));
+            Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+            if (invoice == null) {
+                Invoice newInvoice = new Invoice();
+                newInvoice.setGrandTotal(grandTotal);
+                newInvoice.setDocStatus(Utils.DOC_STATUS_UNATTEMPTED);
+                newInvoice.setOrderId(orderId);
+                newInvoice.setCompany(order.getCompanyName());
+                newInvoice.setCustomer(order.getCustomerCode());
+                newInvoice.setOutstanding(grandTotal);
+                newInvoice.setInvoiceDate(getCurrentDate());
+                newInvoice.setPaidAmount(0.0);
+                newInvoice.setInvoiceNumber("Unsynced" + orderId);
+                stDatabase.stDao().createInvoice(newInvoice);
+
+            } else {
+                invoice.setGrandTotal(grandTotal);
+                invoice.setOutstanding(grandTotal);
+                String companyName = order.getCompanyName();
+                invoice.setCompany(companyName);
+                stDatabase.stDao().updateInvoice(invoice);
+                Invoice testInvoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+                String testCompany = testInvoice.getCompany();
+                int x = 1;
+            }
+        }
+
+        return invoiceIdList;
+    }
+
 
     public JSONArray getTaxArray(Long orderId, StDatabase stDatabase) {
         String CONFIG_CGST_NAME, CONFIG_SGST_NAME, CONFIG_IGST_NAME;
@@ -488,7 +538,8 @@ public class ApplicationController {
     }
 
 
-    public void deleteOrderProduct(long orderProductId, StDatabase stDatabase) {
+    public void deleteOrderProduct(Context ctx, long orderProductId, StDatabase stDatabase, int requestCode) {
+        //Todo: update order total at the top of the page in customerTransactionProduct
         OrderProduct orderProduct = stDatabase.stDao().getOrderProdutByOrderProductId(orderProductId);
         long childId = orderProduct.getChildId();
         long parentId = orderProduct.getParentId();
@@ -503,8 +554,43 @@ public class ApplicationController {
         }
         stDatabase.stDao().deleteOrderProduct(orderProduct);
 
+        //updating the grand total of the corresponding invoice if it remains unsynced
+        Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderProduct.getOrderId());
+        if (invoice.getDocStatus() == Utils.DOC_STATUS_UNATTEMPTED) {
+            double invoiceTotal = stDatabase.stDao().getOrderTotalValueByOrderId(orderProduct.getOrderId());
+            invoice.setGrandTotal(invoiceTotal);
+            invoice.setOutstanding(Double.valueOf(Math.round(invoiceTotal)));
+            stDatabase.stDao().updateInvoice(invoice);
+
+            if (requestCode == 2) {
+                //request from longClick of recyclerview item in customer order to delete the item
+                //check to see if payment has already been made. If paid in excess of the current grandTotal delete the payment
+                //TODO: check to see if only one payment can exist for one invoice(synced and unsynced)
+                Payment payment = stDatabase.stDao().getUnsyncedPaymentByInvoiceNo(invoice.getInvoiceNumber());
+                if (payment != null) {
+                    double paidAmt = payment.getPaymentAmt();
+                    String customerCode = payment.getCustomerCode();
+                    String invoiceNo = payment.getInvoiceNo();
+                    invoice.setPaidAmount(0.0);
+                    stDatabase.stDao().updateInvoice(invoice);
+                    stDatabase.stDao().deletePayment(payment);
+                    String dialogTitle = "Payment Deleted";
+                    String dialogMsg = "A payment of Rs." + paidAmt + " by " + customerCode +
+                            " with Invoice No. " + invoiceNo + " has been deleted";
+                    InfoDialog infoDialog = new InfoDialog();
+                    infoDialog.showInfoDialog(ctx, dialogTitle, dialogMsg);
+                }
+
+            }
+
+        }
+
 
     }
+
+
+
+
 
     public void sendSms(String mobileNo, String smsContent, Context ctx) {
         SmsManager smsManager = SmsManager.getDefault();
@@ -800,6 +886,8 @@ public class ApplicationController {
             MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
         }
 
+
+        /*
         public void fetchFileteredInvoices(final Context ctx, List<String> invoiceNumbers) {
             boolean applyFilter = false;
             String filterUrl;
@@ -809,7 +897,7 @@ public class ApplicationController {
                     filterUrl = "&filters=[[\"Sales%20Invoice\",\"name\",\"=\"," + invoiceNumber;
 
 
-                    String url = loginUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"customer\",\"grand_total\",\"company\",\"outstanding_amount\",\"docstatus\",\"posting_date\"]";
+                    String url = loginUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"customer\",\"rounded_total\",\"company\",\"outstanding_amount\",\"docstatus\",\"posting_date\"]";
                     url = url + filterUrl;
                     JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                             Request.Method.GET, url, null,
@@ -822,6 +910,7 @@ public class ApplicationController {
 
                                         for (int i = 0; i < json.length(); i++) {
                                             invoiceJson = (JSONObject) json.get(i);
+                                            */
                                             /*
                                             String customer_code = invoice.getString("customer");
                                             Double grand_total = Double.parseDouble(invoice.getString("grand_total"));
@@ -843,6 +932,7 @@ public class ApplicationController {
 
                                             stDatabase.stDao().createInvoice(dbInvoice);
                                             */
+                                            /*
                                             Invoice invoice = parseInvoiceJson(invoiceJson);
                                             stDatabase.stDao().createInvoice(invoice);
                                         }
@@ -866,10 +956,11 @@ public class ApplicationController {
 
                 }
             }
-        }
+        }*/
     }
 
     public List<Order> createSplitOrderList(List<Long> orderIdList, StDatabase stDatabase) {
+        //creates arraylist of Orders from arraylist of OrderIds
         List<Order> splitOrderList = new ArrayList<>();
         for (long orderId : orderIdList) {
             Order order = stDatabase.stDao().getOrderByOrderId(orderId);
@@ -885,7 +976,7 @@ public class ApplicationController {
 
 
             String customer_code = invoiceJson.getString("customer");
-            Double grand_total = Double.parseDouble(invoiceJson.getString("grand_total"));
+            Double grand_total = Double.parseDouble(invoiceJson.getString("rounded_total"));
             String invoice_no = invoiceJson.getString("name");
             String company = invoiceJson.getString("company");
             Double outstanding_amount = Double.parseDouble(invoiceJson.getString("outstanding_amount"));
@@ -907,6 +998,47 @@ public class ApplicationController {
         return invoice;
     }
 
+    public void updateInvoiceAndPayment(JSONObject invoiceJson, long orderId, StDatabase stDatabase) {
+        Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+        Payment payment = stDatabase.stDao().getUnsyncedPaymentByInvoiceNo(invoice.getInvoiceNumber());
+        try {
+
+
+            String customer_code = invoiceJson.getString("customer");
+            Double grand_total = Double.parseDouble(invoiceJson.getString("rounded_total"));
+            String invoice_no = invoiceJson.getString("name");
+            String company = invoiceJson.getString("company");
+            Double outstanding_amount = Double.parseDouble(invoiceJson.getString("outstanding_amount"));
+            Boolean invoice_status = Boolean.parseBoolean(invoiceJson.getString("docstatus"));
+            String invoice_date = invoiceJson.getString("posting_date");
+
+            invoice.setInvoiceNumber(invoice_no);
+            //invoice.setCustomer(customer_code);
+            //invoice.setCompany(company);
+            invoice.setGrandTotal(grand_total);
+            invoice.setInvoiceStatus(invoice_status);
+            if (invoice_status) {
+                invoice.setDocStatus(Utils.DOC_STATUS_SUBMITTED);
+            } else {
+                invoice.setDocStatus(Utils.DOC_STATUS_DRAFT);
+            }
+            invoice.setOutstanding(outstanding_amount);
+            invoice.setInvoiceDate(invoice_date);
+
+            //invoice.setPaidAmount(0.00);
+            if (payment != null) {
+                payment.setInvoiceNo(invoice_no);
+                stDatabase.stDao().updatePayment(payment);
+            }
+
+            stDatabase.stDao().updateInvoice(invoice);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
     public void updatePaymentFromOrder(Long orderId, StDatabase stDatabase) {
         Order order = stDatabase.stDao().getOrderByOrderId(orderId);
         Payment payment = new Payment();
@@ -919,10 +1051,11 @@ public class ApplicationController {
             payment.setPaymentStatus(-1);
             payment.setPaymentAmt(order.getPaidAmt());
             payment.setChequePayment(false);
+            stDatabase.stDao().makePayment(payment);
         }
     }
 
-    private String getCurrentDate() {
+    public String getCurrentDate() {
         String currentDate;
         Date c = Calendar.getInstance().getTime();
         System.out.println("Current time => " + c);
@@ -1006,11 +1139,48 @@ public class ApplicationController {
     }
 
     public String createUniqueAppPaymentId(Long paymentId) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyymmddhhmmss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
         String ts = simpleDateFormat.format(new Date());
         String uniqueAppPaymentId = ts + paymentId + "P";
         return uniqueAppPaymentId;
 
     }
 
+    public String createTimeStamp(String dateFormat) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+        String timeStamp = simpleDateFormat.format(new Date());
+        return timeStamp;
+    }
+
+    public Invoice updateOfflineInvoice(Invoice invoice, JSONObject invoiceJson) {
+        try {
+
+
+            String customer_code = invoiceJson.getString("customer");
+            Double grand_total = Double.parseDouble(invoiceJson.getString("rounded_total"));
+            String invoice_no = invoiceJson.getString("name");
+            String company = invoiceJson.getString("company");
+            Double outstanding_amount = Double.parseDouble(invoiceJson.getString("outstanding_amount"));
+            Boolean invoice_status = Boolean.parseBoolean(invoiceJson.getString("docstatus"));
+            String invoice_date = invoiceJson.getString("posting_date");
+
+            invoice.setGrandTotal(grand_total);
+            invoice.setInvoiceNumber(invoice_no);
+            invoice.setOutstanding(outstanding_amount);
+            invoice.setInvoiceStatus(invoice_status);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return invoice;
+    }
+
+
+    public void displayNetworkError(String html, Context ctx) {
+        Intent m2aIntent = new Intent(ctx, Main2Activity.class);
+        m2aIntent.putExtra("html", html);
+        m2aIntent.putExtra("fragment", Utils.ERROR_DISPLAY_FRAGMENT);
+        m2aIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        ctx.startActivity(m2aIntent);
+    }
 }

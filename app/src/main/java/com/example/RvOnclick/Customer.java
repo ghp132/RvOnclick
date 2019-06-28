@@ -13,13 +13,21 @@ public class Customer {
     private String customer_id;
     private String customer_name;
     private String territory;
-    private String customer_group;
+    private String customer_group, primary_address;
     private Boolean customer_disabled;
     private String display_name;
     private String price_list;
     private Double latitude;
     private Double longitude;
     private String mobileNo;
+
+    public String getPrimary_address() {
+        return primary_address;
+    }
+
+    public void setPrimary_address(String primary_address) {
+        this.primary_address = primary_address;
+    }
 
     public String getMobileNo() {
         return mobileNo;

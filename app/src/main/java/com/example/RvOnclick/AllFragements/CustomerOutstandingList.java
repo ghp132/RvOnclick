@@ -2,6 +2,7 @@ package com.example.RvOnclick.AllFragements;
 
 import android.arch.persistence.room.Room;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -13,12 +14,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.example.RvOnclick.ApplicationController;
 import com.example.RvOnclick.DialogFragment_PaymentInfo;
 import com.example.RvOnclick.Invoice;
 import com.example.RvOnclick.InvoiceAdapter;
+import com.example.RvOnclick.Order;
 import com.example.RvOnclick.R;
 import com.example.RvOnclick.StDatabase;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -38,6 +42,7 @@ public class CustomerOutstandingList extends Fragment implements InvoiceAdapter.
     private static final String ARG_PARAM2 = "param2";
 
     public static StDatabase stDatabase;
+    private static ApplicationController ac = new ApplicationController();
     protected String custCode;
     public List<Invoice> invoiceList;
     private InvoiceAdapter.OnItemClickListener listener;
@@ -89,7 +94,9 @@ public class CustomerOutstandingList extends Fragment implements InvoiceAdapter.
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_customer_outstanding_list, container, false);
 
+
         custCode = getActivity().getIntent().getStringExtra("custCode");
+
 
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
@@ -143,23 +150,40 @@ public class CustomerOutstandingList extends Fragment implements InvoiceAdapter.
 
     @Override
     public void onItemClicked(View view, int position) {
-        Double outstandingAmount = invoiceList.get(position).getOutstanding();
-        if (outstandingAmount == 0) {
-            Toast.makeText(getActivity().getApplicationContext(), "No outstanding amount!", Toast.LENGTH_SHORT).show();
+        Long orderId = invoiceList.get(position).getOrderId();
+        Order order = stDatabase.stDao().getOrderByOrderId(invoiceList.get(position).getOrderId());
+        List<Long> orderIdList = new ArrayList<>();
+        if (orderId != null) {
+            //invoices created on ErpNext will not contain orderId
+            orderIdList = ac.splitProductListByCompany(order, stDatabase);
         } else {
-            String invoiceNo = invoiceList.get(position).getInvoiceNumber();
-            String company = invoiceList.get(position).getCompany();
+            orderIdList.add(orderId);
+        }
+        //refreshRecyclerView();
+        if (orderIdList.size() > 1) {
+            refreshRecyclerView();
+            Toast.makeText(getActivity(), "The order has been split", Toast.LENGTH_SHORT).show();
+        } else {
 
-            getActivity().getIntent().putExtra("invoiceNo", invoiceNo);
-            getActivity().getIntent().putExtra("company", company);
-            getActivity().getIntent().putExtra("outstanding", outstandingAmount.toString());
-            //getActivity().getIntent().putExtra("custCode",custCode);
+            Double outstandingAmount = invoiceList.get(position).getOutstanding();
+            if (outstandingAmount == 0) {
+                Toast.makeText(getActivity().getApplicationContext(), "No outstanding amount!", Toast.LENGTH_SHORT).show();
+            } else {
+                String invoiceNo = invoiceList.get(position).getInvoiceNumber();
+                Invoice invoice = stDatabase.stDao().getInvoiceByInvoiceNo(invoiceNo);
+                String company = invoice.getCompany();
 
-            DialogFragment_PaymentInfo df = new DialogFragment_PaymentInfo();
-            df.setCancelable(false);
-            df.setTargetFragment(this, 1);
-            df.show(getFragmentManager(), "Payment_Info");
+                getActivity().getIntent().putExtra("invoiceNo", invoiceNo);
+                getActivity().getIntent().putExtra("company", company);
+                getActivity().getIntent().putExtra("outstanding", outstandingAmount.toString());
+                //getActivity().getIntent().putExtra("custCode",custCode);
 
+                DialogFragment_PaymentInfo df = new DialogFragment_PaymentInfo();
+                df.setCancelable(false);
+                df.setTargetFragment(this, 1);
+                df.show(getFragmentManager(), "Payment_Info");
+
+            }
         }
     }
 
@@ -176,5 +200,17 @@ public class CustomerOutstandingList extends Fragment implements InvoiceAdapter.
     public interface OnFragmentInteractionListener {
         // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
+    }
+
+    private void refreshRecyclerView() {
+        invoiceList.clear();
+        invoiceList.addAll(stDatabase.stDao().getOutstandingInvoicesByCustomerCode(custCode));
+        invoiceAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        refreshRecyclerView();
     }
 }

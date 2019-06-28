@@ -23,6 +23,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.RvOnclick.NetworkOperations.Territory;
 import com.opencsv.CSVReader;
 
 import org.json.JSONArray;
@@ -44,7 +45,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements Territory.territoryReceivedListener {
     EditText tvLoginEmail, tvLoginPassword, tvUrl;
     Button btLogin, btGetData, btNextActivity, btPostOrders, btPostPayments,
             btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig, btEggSales;
@@ -63,6 +64,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+
         tvLoginEmail = (EditText) findViewById(R.id.tv_loginEmail);
         tvLoginPassword = (EditText) findViewById(R.id.tv_loginPassword);
         btLogin = (Button) findViewById(R.id.bt_login);
@@ -79,12 +81,19 @@ public class LoginActivity extends AppCompatActivity {
         tvResponseDisplay = findViewById(R.id.tv_responseDisplay);
 
 
-        //final String companyAbbreviation = "HE";
-        //final String company = "Hari Enterprises";
         tvUrl = findViewById(R.id.tv_url);
         stDatabase = Room.databaseBuilder(getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().fallbackToDestructiveMigration().build();
         //ac.pay4sms(this,"f9c537bc392449647a2055b008cc346b",1,"message from volley","9092747505");
+
+
+        List<com.example.RvOnclick.Territory> tList = stDatabase.stDao().getTerritoriesByType(false);
+        String tText = "";
+        for (com.example.RvOnclick.Territory territory : tList) {
+            tText = tText + "\n" + territory.getTerritoryName();
+        }
+        tvResponseDisplay.setText(tText);
+
 
 
         CookieManager manager = new CookieManager();
@@ -205,6 +214,9 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+        final Territory.territoryReceivedListener listener = this;
+
+
         //getting Items
         btGetData.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -264,6 +276,12 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 getUserConfig(getApplicationContext());
                 requestCounter += 1;
+
+                if (stDatabase.stDao().countTerritory() != 0) {
+                    stDatabase.stDao().deleteAllTerritories();
+                }
+                Territory netTerritory = new Territory();
+                netTerritory.getTerritory(getApplicationContext(), stDatabase, 1, listener);
 
 
             }
@@ -386,6 +404,23 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(),
                                 "Cannot post payments!\n" + error.toString(), Toast.LENGTH_SHORT).show();
 
+                        if (error.networkResponse != null) {
+                            if (error.networkResponse.data != null) {
+                                String body = "";
+                                try {
+                                    body = new String(error.networkResponse.data, "UTF-8");
+                                    //tvResponseDisplay.setText(body);
+                                    ac.displayNetworkError(body, getApplicationContext());
+                                    Log.d(TAG, "onErrorResponse: postPayments" + body);
+                                } catch (UnsupportedEncodingException e) {
+                                    e.printStackTrace();
+                                    Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+
+
+                                }
+                            }
+                        }
+
 
                     }
                 }
@@ -441,6 +476,7 @@ public class LoginActivity extends AppCompatActivity {
                 User u=stDatabase.stDao().getUserByEmailId(userEmail);
                 String salesPerson = u.getSalesPerson();
                 String company = order.getCompanyName();
+                String namingSeries = stDatabase.stDao().getSINamingSeries(company);
 
                 info = info + orderId;
                 String custCode = order.getCustomerCode();
@@ -499,6 +535,9 @@ public class LoginActivity extends AppCompatActivity {
                     params.put("items", jsonArray);
                     params.put("app_invoice_id", appOrderId);
                     params.put("update_stock", "1");
+                    if (namingSeries != null) {
+                        params.put("naming_series", namingSeries);
+                    }
 
 
                     taxes = ac.getTaxArray(orderId, stDatabase);
@@ -535,9 +574,14 @@ public class LoginActivity extends AppCompatActivity {
                                     ac.createPaymentFromOrder(orderId, stDatabase);
                                     Toast.makeText(getApplicationContext(), orderNumber, Toast.LENGTH_SHORT).show();
 
+                                    Invoice existingInvoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+                                    ac.updateOfflineInvoice(existingInvoice, rJson);
+
+
                                     Invoice newInvoice = ac.parseInvoiceJson(rJson);
-                                    newInvoice.setPaidAmount(order.getPaidAmt());
-                                    stDatabase.stDao().createInvoice(newInvoice);
+                                    ac.updateInvoiceAndPayment(rJson, orderId, stDatabase);
+                                    //newInvoice.setPaidAmount(order.getPaidAmt());
+                                    //stDatabase.stDao().createInvoice(newInvoice);
 
 
                                 } catch (JSONException je) {
@@ -562,6 +606,7 @@ public class LoginActivity extends AppCompatActivity {
                                 try {
                                     body = new String(error.networkResponse.data, "UTF-8");
                                     //tvResponseDisplay.setText(body);
+                                    ac.displayNetworkError(body, getApplicationContext());
                                     Log.d(TAG, "onErrorResponse: postOrders" + body);
                                 } catch (UnsupportedEncodingException e) {
                                     e.printStackTrace();
@@ -676,7 +721,7 @@ public class LoginActivity extends AppCompatActivity {
                         }
                         responseCounter += 1;
                         handleProgressBar();
-                        Toast.makeText(getApplicationContext(), "Payment Status Updated", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "PaymentCreator Status Updated", Toast.LENGTH_SHORT).show();
 
                     }
 
@@ -687,6 +732,21 @@ public class LoginActivity extends AppCompatActivity {
                 responseCounter += 1;
                 handleProgressBar();
                 Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                if (error.networkResponse != null) {
+                    if (error.networkResponse.data != null) {
+                        String body = "";
+                        try {
+                            body = new String(error.networkResponse.data, "UTF-8");
+                            //tvResponseDisplay.setText(body);
+                            Log.d(TAG, "onErrorResponse: postOrders" + body);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+
+
+                        }
+                    }
+                }
             }
         });
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
@@ -712,14 +772,14 @@ public class LoginActivity extends AppCompatActivity {
 
     public void updateUnknownOrderStatuses(String loginUrl, Context ctx) {
         String url;
-        RequestQueue requestQueue;
 
 
         final List<Order> unknownOrders = stDatabase.stDao().getOrderByOrderStatus(0);
         final int pageLimitLength = 500;
 
-        url = loginUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"app_invoice_id\",\"docstatus\"]&limit_page_length=" + pageLimitLength;
-        requestQueue = Volley.newRequestQueue(LoginActivity.this);
+        url = loginUrl + "/api/resource/Sales%20Invoice?fields=[\"name\",\"app_invoice_id\",\"docstatus\"," +
+                "\"customer\",\"rounded_total\",\"company\",\"outstanding_amount\"," +
+                "\"posting_date\"]&limit_page_length=" + pageLimitLength;
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
@@ -781,6 +841,21 @@ public class LoginActivity extends AppCompatActivity {
                 responseCounter += 1;
                 handleProgressBar();
                 Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                if (error.networkResponse != null) {
+                    if (error.networkResponse.data != null) {
+                        String body = "";
+                        try {
+                            body = new String(error.networkResponse.data, "UTF-8");
+                            //tvResponseDisplay.setText(body);
+                            Log.d(TAG, "onErrorResponse: postOrders" + body);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+
+
+                        }
+                    }
+                }
             }
         });
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
@@ -865,9 +940,6 @@ public class LoginActivity extends AppCompatActivity {
                                 String product_rate = item.getString("standard_rate");
                                 String company = item.getString("company");
                                 Log.d(TAG, "onResponse: syncItems: Items:" + product_code + "Company" + company);
-                                if (company.equals("MJ Farms")){
-                                    int x = 1;
-                                }
 
 
                                 Product product = new Product();
@@ -988,6 +1060,7 @@ public class LoginActivity extends AppCompatActivity {
                                 String customer_id = customer.getString("name");
                                 String customer_group = customer.getString("customer_group");
                                 String price_list = customer.getString("default_price_list");
+                                String primary_address = customer.getString("primary_address");
                                 //Double latitude = customer.getDouble("customer_latitude");
                                 //Double longitude = customer.getDouble("customer_longitude");
                                 String display_name = null;
@@ -1004,6 +1077,7 @@ public class LoginActivity extends AppCompatActivity {
                                 dbCustomer.setDisplay_name(display_name);
                                 dbCustomer.setPrice_list(price_list);
                                 dbCustomer.setMobileNo(mobileNo);
+                                dbCustomer.setPrimary_address(primary_address);
                                 //dbCustomer.setLatitude(latitude);
                                 //dbCustomer.setLongitude(longitude);
 
@@ -1225,6 +1299,7 @@ public class LoginActivity extends AppCompatActivity {
                         try {
                             body = new String(error.networkResponse.data, "UTF-8");
                             //tvResponseDisplay.setText(body);
+                            ac.displayNetworkError(body, getApplicationContext());
                             Log.d(TAG, "onErrorResponse: postOrders" + body);
                         } catch (UnsupportedEncodingException e) {
                             e.printStackTrace();
@@ -1497,62 +1572,6 @@ public class LoginActivity extends AppCompatActivity {
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
     }
 
-    /*public void getAddress(final Context ctx) {
-        String url = loginUrl + "/api/resource/Address?filters=[[\"Address\",\"is_your_company_address\",\"=\",\"1\"]]";
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                Request.Method.GET, url, null,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        tvResponseDisplay.setText(response.toString());
-                        JSONArray data = new JSONArray();
-                        JSONObject jsonObject = new JSONObject();
-                        try {
-                            data = response.getJSONArray("data");
-                            for (int i = 0; i < data.length(); i++) {
-                                jsonObject = data.getJSONObject(i);
-                                String email = jsonObject.getString("user");
-                                int sendSms = jsonObject.getInt("send_sms_from_mobile");
-                                int allowRateChange = jsonObject.getInt("can_edit_rate");
-                                String salesPerson = jsonObject.getString("sales_person");
-                                String emailId = jsonObject.getString("user");
-                                String fullName = jsonObject.getString("full_name");
-                                User user = new User();
-                                user.setCanEditRate(allowRateChange);
-                                user.setEmailId(emailId);
-                                user.setFullName(fullName);
-                                user.setSendSms(sendSms);
-                                user.setSalesPerson(salesPerson);
-                                stDatabase.stDao().addUser(user);
-                                if (email.equals(loginEmail)) {
-                                    List<UserConfig> userConfigList = stDatabase.stDao().getAllUserConfig();
-                                    UserConfig userConfig = userConfigList.get(0);
-                                    userConfig.setSendSms(sendSms);
-                                    userConfig.setAllowRateChange(allowRateChange);
-                                    userConfig.setSalesPerson(salesPerson);
-                                    stDatabase.stDao().updateUserConfig(userConfig);
-                                    Toast.makeText(ctx, "Fetched UserConfig.", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(getApplicationContext(), "Error in parsing UserConfig", Toast.LENGTH_SHORT).show();
-
-                        }
-                        responseCounter += 1;
-                        handleProgressBar();
-
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Toast.makeText(ctx, "Eror in fetching UserConfig", Toast.LENGTH_SHORT).show();
-                responseCounter += 1;
-                handleProgressBar();
-            }
-        });
-        MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
-    }*/
 
 
     public int countChar(String str, char c) {
@@ -1610,5 +1629,13 @@ public class LoginActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void onTerritoryReceived(int synced, int requestCode, int resultCode, String info) {
+        if (requestCode == 1) {
+            Toast.makeText(this, info, Toast.LENGTH_SHORT).show();
+            tvResponseDisplay.setText("for requestCode1: " + info);
+        } else tvResponseDisplay.setText("no requestcode." + info);
 
+
+    }
 }

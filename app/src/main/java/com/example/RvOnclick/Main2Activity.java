@@ -19,11 +19,17 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.example.RvOnclick.AllFragements.CustomerOutstandingList;
+import com.example.RvOnclick.AllFragements.ErrorDisplayFragment;
+import com.example.RvOnclick.AllFragements.VolleyErrorList;
 
 public class Main2Activity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         CustomerOutstandingList.OnFragmentInteractionListener {
     private static final String TAG_CUST_OUTSTANDING_FRAGEMENT = "TAG_CUST_OUTSTANDING_FRAGEMENT";
+    private static final String TAG_ERROR_DISPLAY_FRAGMENT = "TAG_ERROR_DISPLAY_FRAGMENT";
+    private static final String TAG_VOLLEY_ERROR_LIST_FRAGMENT = "TAG_VOLLEY_ERROR_LIST_FRAGMENT";
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +41,7 @@ public class Main2Activity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "Under development!", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }
         });
@@ -49,8 +55,12 @@ public class Main2Activity extends AppCompatActivity
         Intent intent = getIntent();
         String fragmentName = intent.getStringExtra("fragment");
 
+        getSupportActionBar().setTitle(R.string.app_name);
+
 
         Fragment customerOutstandingListFragment = new CustomerOutstandingList();
+        Fragment errorDisplayFragment = new ErrorDisplayFragment();
+
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fm.beginTransaction();
 
@@ -59,6 +69,13 @@ public class Main2Activity extends AppCompatActivity
                     TAG_CUST_OUTSTANDING_FRAGEMENT);
             fragmentTransaction.commit();
         }
+
+        if (fragmentName.equals(Utils.ERROR_DISPLAY_FRAGMENT)) {
+            fragmentTransaction.replace(R.id.fragement_container, errorDisplayFragment,
+                    TAG_ERROR_DISPLAY_FRAGMENT);
+            fragmentTransaction.commit();
+        }
+
     }
 
     @Override
@@ -109,7 +126,14 @@ public class Main2Activity extends AppCompatActivity
 
         } else if (id == R.id.nav_share) {
 
-        } else if (id == R.id.nav_send) {
+        } else if (id == R.id.nav_volleyError) {
+            VolleyErrorList volleyErrorList = new VolleyErrorList();
+            FragmentManager fm = getSupportFragmentManager();
+            FragmentTransaction fragmentTransaction = fm.beginTransaction();
+            fragmentTransaction.replace(R.id.fragement_container, volleyErrorList,
+                    TAG_CUST_OUTSTANDING_FRAGEMENT);
+            fragmentTransaction.commit();
+
 
         }
 

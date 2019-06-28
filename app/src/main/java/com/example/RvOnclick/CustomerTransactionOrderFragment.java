@@ -25,6 +25,7 @@ import android.widget.Toast;
 
 import com.example.RvOnclick.BluetoothPrinter.DeviceList;
 import com.example.RvOnclick.BluetoothPrinter.Print;
+import com.example.RvOnclick.BluetoothPrinter.PrintTextUtils;
 import com.example.RvOnclick.BluetoothPrinter.PrinterCommands;
 import com.example.RvOnclick.BluetoothPrinter.Utils;
 
@@ -46,6 +47,7 @@ public class CustomerTransactionOrderFragment extends Fragment
         implements OrderProductAdapter.OnItemClickListener,
         ApplicationController.OnInvoiceStatusUpdatedListener,
         ApplicationController.OnInvoicePostedListener {
+    PrintTextUtils printUtils = new PrintTextUtils();
 
     public static StDatabase stDatabase;
     public Long orderId;
@@ -135,6 +137,7 @@ public class CustomerTransactionOrderFragment extends Fragment
         btPay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                /*
                 if (orderStatus == -1) {
                     pbPrintProgress.setVisibility(View.VISIBLE);
                     List<Order> pOrderList = new ArrayList<>();
@@ -142,21 +145,27 @@ public class CustomerTransactionOrderFragment extends Fragment
                     postInvoices.postOrders(getActivity(), pOrderList, stDatabase, 1);
 
 
-                }
+                }*/
+                showPaymentFragment();
+
 
             }
         });
 
         if (orderId == -1) {
             btBtpPrint.setVisibility(View.GONE);
-            btPay.setVisibility(View.GONE);
+            btPay.setLayoutParams(new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams
+                    .MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         } else {
             btBtpPrint.setVisibility(View.VISIBLE);
             btPay.setVisibility(View.VISIBLE);
             btBtpPrint.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    pbPrintProgress.setVisibility(View.VISIBLE);
+
+
+                    printBill2();
+                    /*pbPrintProgress.setVisibility(View.VISIBLE);
                     List<Order> pOrderList = new ArrayList<>();
                     pOrderList.add(stDatabase.stDao().getOrderByOrderId(orderId));
                     if (orderStatus == -1) {
@@ -166,7 +175,7 @@ public class CustomerTransactionOrderFragment extends Fragment
                     } else {
                         pbPrintProgress.setVisibility(View.GONE);
                         printBill();
-                    }
+                    }*/
 
 
                 }
@@ -260,18 +269,18 @@ public class CustomerTransactionOrderFragment extends Fragment
     @Override
     public void onLongClick(View view, final int position) {
         // Toast.makeText(getActivity(),"clicked at position" + position,Toast.LENGTH_SHORT).show();
-
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(getActivity(), android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(getActivity());
-        }
-        builder.setTitle("Delete Item")
-                .setMessage("Are you sure you want to delete this item?")
-                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        // continue with delete
+        if (orderStatus == -1) {
+            AlertDialog.Builder builder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                builder = new AlertDialog.Builder(getActivity(), android.R.style.Theme_Material_Dialog_Alert);
+            } else {
+                builder = new AlertDialog.Builder(getActivity());
+            }
+            builder.setTitle("Delete Item")
+                    .setMessage("Are you sure you want to delete this item?")
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // continue with delete
                         /*if (stDatabase.stDao().countOrderProduct(orderId) > 1) {
                             stDatabase.stDao().deleteOrderProduct(productList.get(position));
                             updateProductAdapterfromDB();
@@ -285,28 +294,31 @@ public class CustomerTransactionOrderFragment extends Fragment
                             getActivity().finish();
                         }*/
 
-                        ac.deleteOrderProduct(productList.get(position).getOrderProductId(), stDatabase);
-                        int countOfOrderProduct = stDatabase.stDao().countOrderProduct(orderId);
-                        updateProductAdapterfromDB();
-                        if (countOfOrderProduct == 0) {
-                            stDatabase.stDao().deleteOrderByOrderId(orderId);
-                            orderId = Long.valueOf(-1);
-                            getActivity().getIntent().putExtra("orderId", orderId);
-                            productList.clear();
-                            productAdapter.notifyDataSetChanged();
-                            getActivity().finish();
+                            ac.deleteOrderProduct(getActivity(), productList.get(position).getOrderProductId(), stDatabase, 2);
+                            int countOfOrderProduct = stDatabase.stDao().countOrderProduct(orderId);
+                            updateProductAdapterfromDB();
+                            if (countOfOrderProduct == 0) {
+                                deleteOrderAndInvoice();
+                                orderId = Long.valueOf(-1);
+                                getActivity().getIntent().putExtra("orderId", orderId);
+                                productList.clear();
+                                productAdapter.notifyDataSetChanged();
+                                getActivity().finish();
+                            }
+
                         }
+                    })
+                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // do nothing
+                        }
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
 
-                    }
-                })
-                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        // do nothing
-                    }
-                })
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
-
+        } else {
+            Toast.makeText(getActivity().getApplicationContext(), "This order cannot be editted.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -433,6 +445,7 @@ public class CustomerTransactionOrderFragment extends Fragment
                                 textRepeater(" ", 10 - qtyLen) +
                                 strAmt + textRepeater(" ", 12 - amtLen));
                         printText(textRepeater(".", Utils.LINE_LENGTH));
+                        counter++;
                     }
                     grandTotal = Math.round(grandTotal * 100) / 100;
                     printText("Total" + textRepeater(" ",
@@ -719,6 +732,161 @@ public class CustomerTransactionOrderFragment extends Fragment
         editText.setBackgroundColor(Color.TRANSPARENT);
     }
 
+    private void deleteOrderAndInvoice() {
+        stDatabase.stDao().deleteOrderByOrderId(orderId);
+        Invoice invoice = stDatabase.stDao().getInvoiceByOrderId(orderId);
+        int invoiceStatus = invoice.getDocStatus();
+        if (invoiceStatus == com.example.RvOnclick.Utils.DOC_STATUS_UNATTEMPTED) {
+            stDatabase.stDao().deleteInvoiceByOrderId(orderId);
+        }
+    }
 
+    private void showPaymentFragment() {
+        Intent m2aIntent = new Intent(getActivity(), Main2Activity.class);
+        m2aIntent.putExtra("custCode", custCode);
+        m2aIntent.putExtra("fragment", com.example.RvOnclick.Utils.CUSTOMER_OUTSTANDING_LIST_FRAGMENT);
+        getActivity().startActivity(m2aIntent);
+    }
+
+
+    protected void printBill2() {
+        if (ApplicationController.btsocket == null) {
+            Intent BTIntent = new Intent(getActivity(), DeviceList.class);
+            this.startActivityForResult(BTIntent, DeviceList.REQUEST_CONNECT_BT);
+        } else {
+            Order order = stDatabase.stDao().getOrderByOrderId(orderId);
+            List<Long> orderIdList = ac.splitProductListByCompany(order, stDatabase);
+            for (Long pOid : orderIdList) {
+                Order pOrder = stDatabase.stDao().getOrderByOrderId(pOid);
+                String companyName = pOrder.getCompanyName();
+                Company company = stDatabase.stDao().getCompanyByCompanyName(companyName);
+                String addressLine1 = company.getAddress_line1();
+                String addressLine2 = company.getAddress_line2();
+                if (addressLine2 == null) {
+                    addressLine2 = "";
+                }
+                String city = company.getCity();
+                String phone = company.getPhone();
+                String companyGstin = company.getGstin();
+                String orderNumber = "NA";
+                if (invoiceUpdated) {
+                    if (pOrder.getOrderNumber() != null) {
+                        orderNumber = pOrder.getOrderNumber();
+                    }
+                }
+
+
+                OutputStream opstream = null;
+                try {
+                    opstream = ApplicationController.btsocket.getOutputStream();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                outputStream = opstream;
+
+                //print command
+                try {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    outputStream = ApplicationController.btsocket.getOutputStream();
+                    byte[] printformat = new byte[]{0x1B, 0x21, 0x03};
+                    outputStream.write(printformat);
+
+
+                    printCustom(companyName, 2, 1);
+                    printCustom(addressLine1, 1, 1);
+                    if (!addressLine2.equals("")) {
+                        printCustom(addressLine2 + ", " + city, 0, 1);
+                    }
+                    printCustom("Ph.: " + phone, 0, 1);
+                    String dateTime[] = printUtils.getDateTime();
+
+                    printText("Date: " + dateTime[0] +
+                            printUtils.textRepeater(" ", printUtils.getSpaceCount("Date: " +
+                                    dateTime[0] + "Time: " + dateTime[1], PrintTextUtils.THREE_INCH)) + "Time: " + dateTime[1]);
+
+                    printText(printUtils.lineFormatter("Invoice No.: " + orderNumber, PrintTextUtils.THREE_INCH));
+                    Log.d(TAG, "printBill: orderNumber" + lineFormatter("Invoice No.: " + orderNumber));
+                    printText(printUtils.textRepeater("-", PrintTextUtils.THREE_INCH));
+
+                    printText(printUtils.lineFormatter("Customer:", PrintTextUtils.THREE_INCH));
+                    Customer customer = stDatabase.stDao().getCustomerbyCustomerCode(custCode);
+                    String customerName = customer.getCustomer_name();
+                    printCustom(customerName + printUtils.textRepeater(" ", printUtils
+                                    .getSpaceCount(customerName, PrintTextUtils.THREE_INCH)),
+                            1, 0);
+                    printText(textRepeater("-", PrintTextUtils.THREE_INCH));
+
+                    List<OrderProduct> pOrderProdList = stDatabase.stDao().getOrderProductsById(pOid);
+                    int counter = 1;
+                    double grandTotal = 0.00;
+
+                    int col1 = PrintTextUtils.f1Col1;
+                    int col2 = PrintTextUtils.f1Col2;
+                    int col3 = PrintTextUtils.f1Col3;
+                    int col4 = PrintTextUtils.f1Col4;
+                    int col5 = PrintTextUtils.f1Col5;
+
+                    for (OrderProduct pOrderProd : pOrderProdList) {
+                        //Si.No
+                        double dRate = pOrderProd.getRate();
+                        double dQty = pOrderProd.getQty();
+                        double dAmt = Math.round(dRate * 100 * dQty) / 100.00;
+                        grandTotal = grandTotal + dAmt;
+
+
+                        String strCounter = String.valueOf(counter);
+                        String siNo = printUtils.rLineFomatter(strCounter + " ", col1);
+                        String prodName = pOrderProd.getProductCode();
+                        if (prodName.length() > col2) {
+                            prodName = prodName.substring(0, col2 - 1);
+                        }
+                        prodName = printUtils.lineFormatter(prodName, col2);
+
+                        String strQty = String.valueOf(dQty);
+                        String qty = printUtils.rLineFomatter(strQty, col3);
+                        String strRate = String.valueOf(dRate);
+                        String rate = printUtils.rLineFomatter(strRate, col4);
+                        String strAmt = String.valueOf(dAmt);
+                        String amt = printUtils.rLineFomatter(strAmt, col5);
+
+                        printText(siNo + prodName + qty + rate + amt);
+
+                        counter++;
+
+
+                    }
+                    grandTotal = Math.round(grandTotal * 100) / 100;
+
+                    printText(printUtils.textRepeater("-", PrintTextUtils.THREE_INCH));
+                    printText("Total" + printUtils.textRepeater(" ",
+                            printUtils.getSpaceCount("Total" + grandTotal, PrintTextUtils.THREE_INCH)) + grandTotal);
+                    printText(printUtils.textRepeater(".", PrintTextUtils.THREE_INCH));
+
+                    printCustom(String.valueOf(Math.round(grandTotal)), 2, 1);
+                    printText(printUtils.textRepeater(" ", PrintTextUtils.THREE_INCH));
+                    printNewLine();
+                    printNewLine();
+
+                    Thread.sleep(3000);
+                    outputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(getActivity(), e.toString(), Toast.LENGTH_SHORT).show();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+            if (orderIdList.size() > 1) {
+                Toast.makeText(getActivity(), "Order has been split", Toast.LENGTH_SHORT).show();
+                refreshFragment();
+            }
+        }
+    }
 
 }

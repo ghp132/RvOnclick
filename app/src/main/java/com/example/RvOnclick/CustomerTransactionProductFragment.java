@@ -86,7 +86,6 @@ ApplicationController.OnPriceProcessedListener{
             priceList = "Standard Selling";
         }
 
-        //List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
         getActivity().getIntent().putExtra("priceList", "Standard Selling");
         if (priceList != null) {
             getActivity().getIntent().putExtra("priceList", priceList);
@@ -94,28 +93,6 @@ ApplicationController.OnPriceProcessedListener{
 
             priceProcessedListener = this;
             new UpdatePrices(productList,priceList,priceProcessedListener).execute();
-
-
-            /*stDatabase.stDao().resetProductRate();
-
-            for (Price p : prices) {
-                //updating prices of all items from the customer price list
-                String prodCodeFromPrices = p.getProductCode();
-                for (Product product : productList) {
-                    String prodCode = product.getProductCode();
-                    Log.d(TAG, "onCreateView: prodCode");
-                    if (prodCodeFromPrices.equals(prodCode)) {
-                        int indexOfProduct = productList.indexOf(product);
-                        product.setProductRate(p.getPrice());
-                        //check later
-                        stDatabase.stDao().updateProduct(product);
-                        productList.set(indexOfProduct, product);
-                        Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
-                        break;
-                    }
-                }
-            }*/
-
         }
 
 
@@ -156,9 +133,6 @@ ApplicationController.OnPriceProcessedListener{
 
                 productList.clear();
                 productList.addAll(sortProductList(filtered));
-                //productList = sortProductList(filtered);
-                //final ProductAdapter productAdapter = new ProductAdapter(listener, productList, getActivity());
-                //recyclerView.setAdapter(productAdapter);
                 productAdapter.notifyDataSetChanged();
 
 

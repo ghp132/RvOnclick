@@ -13,7 +13,10 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -36,10 +39,12 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
     public RecyclerView recyclerView;
     public CustomerAdapter customerAdapter;
     private String TAG  = "TabFragment1";
+    private Spinner spTerritoryList;
 
 
 
     public static List<Customer> customerList, searchableList;
+    private List<Territory> territories;
 
 
     private CustomerAdapter.OnItemClickListener listener;
@@ -56,12 +61,28 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_tab_fragment1, container, false);
+        spTerritoryList = view.findViewById(R.id.sp_routeList);
+
 
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
 
-        customerList = stDatabase.stDao().getEnabledCustomers(false);
+        territories = applicationController.sortTerritoryList(stDatabase.stDao()
+                .getTerritoriesByType(false));
+        String[] territoryAdapter = new String[territories.size() + 1];
+        //adding "All" as the first item of the array adapter
+        territoryAdapter[0] = "All";
+        //creating array adapter for spinner
+        int tc = 1;
+        for (Territory territory : territories) {
+            territoryAdapter[tc] = territory.getTerritoryName();
+            tc++;
+        }
+        ArrayAdapter<String> tAdapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_dropdown_item, territoryAdapter);
+        spTerritoryList.setAdapter(tAdapter);
 
+
+        customerList = stDatabase.stDao().getEnabledCustomers(false);
 
         etCustomerSearch = view.findViewById(R.id.et_searchCustomerList);
 
@@ -87,7 +108,8 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 //fires up when there's any change in the search text box
-                List<Customer> filtered = new ArrayList<>();
+                filterCustomers();
+                /*List<Customer> filtered = new ArrayList<>();
                 searchableList = stDatabase.stDao().getCustomer();
                 for (Customer customer : searchableList) {
                     String searchString;
@@ -104,13 +126,26 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
                 customerList = applicationController.sortCustomerList(filtered);
                 customerAdapter = new CustomerAdapter(listener, customerList, getActivity());
                 recyclerView.setAdapter(customerAdapter);
-                customerAdapter.notifyDataSetChanged();
+                customerAdapter.notifyDataSetChanged();*/
 
             }
 
 
             @Override
             public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+
+        spTerritoryList.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                filterCustomers();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
 
             }
         });
@@ -143,5 +178,36 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
         etCustomerSearch.selectAll();
         applicationController.showKeyboard(etCustomerSearch,getActivity());
         super.onResume();
+    }
+
+    private void filterCustomers() {
+        List<Customer> filtered = new ArrayList<>();
+        searchableList = stDatabase.stDao().getCustomer();
+
+        for (Customer customer : searchableList) {
+            String searchString;
+            if (customer.getDisplay_name() == null || customer.getDisplay_name().equals("null")) {
+                searchString = customer.getCustomer_id().toLowerCase();
+            } else {
+                searchString = customer.getCustomer_id().toLowerCase();
+            }
+            String searchedString = etCustomerSearch.getText().toString().toLowerCase();
+            if (searchString.contains(searchedString)) {
+                if (spTerritoryList.getSelectedItemId() != 0) {
+                    String territoryName = spTerritoryList.getSelectedItem().toString();
+                    if (customer.getTerritory().equals(territoryName)) {
+
+                        filtered.add(customer);
+                    }
+                } else {
+                    filtered.add(customer);
+                }
+            }
+        }
+        customerList.clear();
+        customerList.addAll(applicationController.sortCustomerList(filtered));
+        /*customerAdapter = new CustomerAdapter(listener, customerList, getActivity());
+        recyclerView.setAdapter(customerAdapter);*/
+        customerAdapter.notifyDataSetChanged();
     }
 }
