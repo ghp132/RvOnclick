@@ -12,8 +12,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -32,8 +34,9 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     TextView tv;
     Button btProductSave, btIncrease, btDecrease, btCancel;
     EditText etQty, etRate, etFreeQty;
+    Spinner spWarehouse;
     private static StDatabase stDatabase;
-    private String custCode, priceListName, territory;
+    private String custCode, priceListName, territory, warehouse;
     private long orderId, invoiceId;
     private double orderTotal;
     ApplicationController ac = new ApplicationController();
@@ -54,10 +57,10 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         territory = intent.getStringExtra("territory");
 
 
-
-
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_dialog_fragment__product_rate_info, container, false);
+
+
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
 
@@ -67,22 +70,43 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         btDecrease = view.findViewById(R.id.bt_decrease);
         etQty = view.findViewById(R.id.et_qty);
         etFreeQty = view.findViewById(R.id.et_freeQty);
+        spWarehouse = view.findViewById(R.id.sp_warehouse);
 
+        //populating spinner
+        List<Warehouse> warehouseList = stDatabase.stDao().getAllNonGroupWarehouses();
+        String[] warehouseArray = new String[warehouseList.size()];
+        int counter = 0;
+        for (Warehouse wh : warehouseList) {
+            warehouseArray[counter] = wh.getName();
+            counter++;
+        }
 
+        ArrayAdapter<String> warehouseAdapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_dropdown_item, warehouseArray);
+        spWarehouse.setAdapter(warehouseAdapter);
 
 
         etRate = view.findViewById(R.id.et_rate);
 
         etRate.setText(String.valueOf(getArguments().getDouble("rate")));
-        if (stDatabase.stDao().getAllUserConfig().get(0).getAllowRateChange()==0){
+        if (stDatabase.stDao().getAllUserConfig().get(0).getAllowRateChange() == 0) {
             disableEditText(etRate);
         }
         Double qty = getArguments().getDouble("qty");
         double freeQty = getArguments().getDouble("freeQty");
+        warehouse = getArguments().getString("warehouse");
         etQty.setText(Double.toString(qty));
         etFreeQty.setText(Double.toString(freeQty));
 
-        if (getTargetRequestCode()==1) {
+        counter = 0;
+        for (String wh : warehouseArray) {
+            if (wh.equals(warehouse)) {
+                break;
+            }
+            counter++;
+        }
+        spWarehouse.setSelection(counter);
+
+        if (getTargetRequestCode() == 1) {
             etQty.setText("1.0");
         }
         etQty.selectAll();
@@ -90,29 +114,35 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         etQty.requestFocus();
         getDialog().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 
+
         btProductSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Double qty = Double.parseDouble(etQty.getText().toString());
-                if (etFreeQty.getText().toString().equals("")){etFreeQty.setText("0");}
+
+                warehouse = spWarehouse.getSelectedItem().toString();
+                double qty = Double.parseDouble(etQty.getText().toString());
+                if (etFreeQty.getText().toString().equals("")) {
+                    etFreeQty.setText("0");
+                }
+
                 double freeQty = Double.parseDouble(etFreeQty.getText().toString());
                 Double rate = Double.parseDouble((etRate.getText().toString()));
                 if (qty > 0) {
                     CreateNewOrderIfNotExists(orderId);
-                    long existingId = alreadyPresent(orderId,prodCode);
-                    if (existingId!=0) {
+                    long existingId = alreadyPresent(orderId, prodCode);
+                    if (existingId != 0) {
                         //same item already existing will be deleted.
-                        OrderProduct orderProduct=stDatabase.stDao().getOrderProdutByOrderProductId(existingId);
-                        if (orderProduct.getParentId()!=0){
+                        OrderProduct orderProduct = stDatabase.stDao().getOrderProdutByOrderProductId(existingId);
+                        if (orderProduct.getParentId() != 0) {
                             //passing parentId instead of childId to delete both parent and child.
                             existingId = orderProduct.getParentId();
                         }
                         ac.deleteOrderProduct(getActivity(), existingId, stDatabase, 2);
                     }
-                       long parentId = AddProductToOrder(orderId, prodCode, qty, rate);
+                    long parentId = AddProductToOrder(orderId, prodCode, qty, rate, warehouse);
 
-                    if (freeQty>0){
-                        addFreeQtyToOrder(orderId,prodCode,freeQty,parentId);
+                    if (freeQty > 0) {
+                        addFreeQtyToOrder(orderId, prodCode, freeQty, parentId, warehouse);
                     }
                 }
 
@@ -140,6 +170,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
                 getDialog().dismiss();
             }
         });
+
         btIncrease.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -170,7 +201,10 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
         tv = (TextView) view.findViewById(R.id.tv1);
         String sampleText = prodCode + getArguments().get("custCode") + getArguments().getString("orderId");
+
         tv.setText(sampleText);
+
+
         return view;
 
 
@@ -211,12 +245,12 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
     }
 
     //Adds items to the order in OrderProduct database table
-    public long AddProductToOrder(long orderId, String prodCode, double qty, double rate) {
+    public long AddProductToOrder(long orderId, String prodCode, double qty, double rate, String warehouse) {
         ApplicationController ac = new ApplicationController();
         Product product = stDatabase.stDao().getProductByProductCode(prodCode);
-        String companyName = getCompanyName(prodCode);
-        String abbr = stDatabase.stDao().getAbbrByCompanyName(companyName);
-        String warehouse = "Stores - " + abbr;
+        String companyName = ac.getCompanyName(prodCode, stDatabase);
+        //String abbr = stDatabase.stDao().getAbbrByCompanyName(companyName);
+        //String warehouse = "Stores - " + abbr;
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.setOrderId(orderId);
         orderProduct.setProductCode(prodCode);
@@ -239,8 +273,8 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         return parentId;
     }
 
-    private void addFreeQtyToOrder(long orderId, String prodCode,double freeQty, long parentId){
-        String companyName = getCompanyName(prodCode);
+    private void addFreeQtyToOrder(long orderId, String prodCode, double freeQty, long parentId, String warehouse) {
+        String companyName = ac.getCompanyName(prodCode, stDatabase);
         OrderProduct orderProduct = new OrderProduct();
         OrderProduct parent = new OrderProduct();
         orderProduct.setOrderId(orderId);
@@ -249,14 +283,15 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         orderProduct.setQty(freeQty);
         orderProduct.setDiscountPercentage(100.0);
         orderProduct.setCompanyName(companyName);
+        orderProduct.setWarehouse(warehouse);
         long childId = stDatabase.stDao().addProductToOrder(orderProduct);
         parent = stDatabase.stDao().getOrderProdutByOrderProductId(parentId);
         parent.setChildId(childId);
         stDatabase.stDao().updateOrderProduct(parent);
     }
 
-    private long alreadyPresent(long orderId, String prodCode){
-        long existingId=0;
+    private long alreadyPresent(long orderId, String prodCode) {
+        long existingId = 0;
         List<OrderProduct> orderProductList = stDatabase.stDao().getOrderProductsById(orderId);
         for (OrderProduct op : orderProductList) {
             if (op.getProductCode().equals(prodCode)) {
@@ -279,7 +314,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
     }
 
-    public JSONArray createGstJsonArray(Company company, Context ctx){
+    public JSONArray createGstJsonArray(Company company, Context ctx) {
         String taxNameCgst, taxNameSgst, companyAbbr;
         JSONArray gstJsonArray = new JSONArray();
         companyAbbr = company.getAbbr();
@@ -289,7 +324,7 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         TblSettings taxConfigSgst = stDatabase.stDao().getConfigByName("sgstAccountName");
         taxNameCgst = taxConfigCgst.getSvalues();
         taxNameSgst = taxConfigSgst.getSvalues();
-        JSONObject cgstJsonObj = createTaxJsonObject(taxNameCgst,companyAbbr,ctx);
+        JSONObject cgstJsonObj = createTaxJsonObject(taxNameCgst, companyAbbr, ctx);
         JSONObject sgstJsonObj = createTaxJsonObject(taxNameSgst, companyAbbr, ctx);
         gstJsonArray.put(cgstJsonObj);
         gstJsonArray.put(sgstJsonObj);
@@ -299,9 +334,9 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
 
         return gstJsonArray;
 
-        }
+    }
 
-    public JSONObject createTaxJsonObject(String taxName, String companyAbbr,Context ctx){
+    public JSONObject createTaxJsonObject(String taxName, String companyAbbr, Context ctx) {
         ApplicationController ac = new ApplicationController();
         JSONObject taxJson = new JSONObject();
         taxName = taxName + " - " + companyAbbr;
@@ -333,28 +368,28 @@ public class DialogFragment_ProductRateInfo extends DialogFragment {
         editText.setTextColor(Color.BLACK);
         editText.setBackgroundColor(Color.TRANSPARENT);
     }
-
-    private String getCompanyName(String pCode){
-        String companyName=stDatabase.stDao().getProductByProductCode(pCode).getProductCompany();
-        boolean companyDefaultSet=false;
-        if (companyName==null||companyName.equals("null")){
+/*
+    private String getCompanyName(String pCode) {
+        String companyName = stDatabase.stDao().getProductByProductCode(pCode).getProductCompany();
+        boolean companyDefaultSet = false;
+        if (companyName == null || companyName.equals("null")) {
             //company name might be null if company name has not been added to the Company custom field for Item
             //hence default company will be added to those
             //if no default company is set presumably the first company will be added
             List<Company> companies = stDatabase.stDao().getAllCompanies();
-            for (Company company:companies){
-                if (company.getIsDefault()==1){
+            for (Company company : companies) {
+                if (company.getIsDefault() == 1) {
                     companyName = company.getCompanyName();
-                    companyDefaultSet=true;
+                    companyDefaultSet = true;
                     break;
                 }
             }
-            if (!companyDefaultSet){
+            if (!companyDefaultSet) {
                 companyName = companies.get(0).getCompanyName();
             }
         }
 
         return companyName;
-    }
+    }*/
 
 }

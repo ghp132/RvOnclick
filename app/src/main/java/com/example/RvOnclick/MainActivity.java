@@ -3,23 +3,39 @@ package com.example.RvOnclick;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.support.design.widget.TabLayout;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.content.PermissionChecker;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.Toast;
-
-import com.google.android.gms.location.LocationServices;
-
-import java.security.Permission;
 
 public class MainActivity extends AppCompatActivity {
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.overflow_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.mu_mainSettings:
+                showSettingsFragment();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
     ApplicationController ac = new ApplicationController();
     
 
@@ -96,6 +112,13 @@ public class MainActivity extends AppCompatActivity {
             ac.sendSms(mobileNo,smsContent, this);
 
         }
+    }
+
+    private void showSettingsFragment() {
+        //leads to the new main activity Main2Activity
+        Intent m2aIntent = new Intent(this, Main2Activity.class);
+        m2aIntent.putExtra("fragment", Utils.SETTINGS_FRAGMENT);
+        this.startActivity(m2aIntent);
     }
 
 }

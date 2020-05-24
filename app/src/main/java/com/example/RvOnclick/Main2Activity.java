@@ -20,7 +20,11 @@ import android.view.View;
 
 import com.example.RvOnclick.AllFragements.CustomerOutstandingList;
 import com.example.RvOnclick.AllFragements.ErrorDisplayFragment;
+import com.example.RvOnclick.AllFragements.ProductListFragment;
+import com.example.RvOnclick.AllFragements.SettingsFragment;
+import com.example.RvOnclick.AllFragements.StockTransferWarehouseFragment;
 import com.example.RvOnclick.AllFragements.VolleyErrorList;
+import com.example.RvOnclick.AllFragements.WarehouseSelectionFragment;
 
 public class Main2Activity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -28,7 +32,10 @@ public class Main2Activity extends AppCompatActivity
     private static final String TAG_CUST_OUTSTANDING_FRAGEMENT = "TAG_CUST_OUTSTANDING_FRAGEMENT";
     private static final String TAG_ERROR_DISPLAY_FRAGMENT = "TAG_ERROR_DISPLAY_FRAGMENT";
     private static final String TAG_VOLLEY_ERROR_LIST_FRAGMENT = "TAG_VOLLEY_ERROR_LIST_FRAGMENT";
-
+    private static final String TAG_SETTINGS_FRAGEMNT = "TAG_SETTINGS_FRAGMENT";
+    private static final String TAG_WAREHOUSE_SELECTION_FRAGMENT = "TAG_WAREHOUSE_SELECTION_FRAGMENT";
+    private static final String TAG_PRODUCT_LIST_FRAGMENT = "TAG_PRODUCT_LIST_FRAGMENT";
+    private static final String TAG_STOCK_TRANSFER_WAREHOUSE_FRAGMENT = "TAG_STOCK_TRANSFER_WAREHOUSE_FRAGMENT";
 
 
     @Override
@@ -60,6 +67,10 @@ public class Main2Activity extends AppCompatActivity
 
         Fragment customerOutstandingListFragment = new CustomerOutstandingList();
         Fragment errorDisplayFragment = new ErrorDisplayFragment();
+        Fragment settingsFragemnt = new SettingsFragment();
+        Fragment warehouseSelectionFragement = new WarehouseSelectionFragment();
+        Fragment productListFragment = new ProductListFragment();
+        Fragment stockTransferWarehouseFragment = new StockTransferWarehouseFragment();
 
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fm.beginTransaction();
@@ -76,6 +87,33 @@ public class Main2Activity extends AppCompatActivity
             fragmentTransaction.commit();
         }
 
+        if (fragmentName.equals(Utils.SETTINGS_FRAGMENT)) {
+            fragmentTransaction.replace(R.id.fragement_container, settingsFragemnt,
+                    TAG_SETTINGS_FRAGEMNT);
+            fragmentTransaction.commit();
+        }
+
+        switch (fragmentName) {
+            case Utils.WAREHOUSE_SELECTION_FRAGMENT:
+                fragmentTransaction.replace(R.id.fragement_container, warehouseSelectionFragement,
+                        TAG_WAREHOUSE_SELECTION_FRAGMENT);
+                fragmentTransaction.commit();
+                break;
+
+            case Utils.PRODUCT_LIST_FRAGMENT:
+                fragmentTransaction.replace(R.id.fragement_container, productListFragment,
+                        TAG_PRODUCT_LIST_FRAGMENT);
+                fragmentTransaction.commit();
+                break;
+
+            case Utils.STOCK_TRANSFER_WAREHOUSE_FRAGMENT:
+                getIntent().putExtra("transactionType", Utils.STOCK_MATERIAL_TRANSFER);
+                getIntent().putExtra("docType", Utils.STOCK_ENTRY);
+                //FragmentTransaction fragmentTransaction = fm.beginTransaction();
+                fragmentTransaction.replace(R.id.fragement_container, stockTransferWarehouseFragment, TAG_STOCK_TRANSFER_WAREHOUSE_FRAGMENT);
+                fragmentTransaction.commit();
+                break;
+        }
     }
 
     @Override
@@ -118,7 +156,14 @@ public class Main2Activity extends AppCompatActivity
 
         if (id == R.id.nav_home) {
             // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        } else if (id == R.id.nav_stockTransfer) {
+            getIntent().putExtra("transactionType", Utils.STOCK_MATERIAL_TRANSFER);
+            getIntent().putExtra("docType", Utils.STOCK_ENTRY);
+            StockTransferWarehouseFragment stockTransferWarehouseFragment = new StockTransferWarehouseFragment();
+            FragmentManager fm = getSupportFragmentManager();
+            FragmentTransaction fragmentTransaction = fm.beginTransaction();
+            fragmentTransaction.replace(R.id.fragement_container, stockTransferWarehouseFragment, TAG_STOCK_TRANSFER_WAREHOUSE_FRAGMENT);
+            fragmentTransaction.commit();
 
         } else if (id == R.id.nav_slideshow) {
 
@@ -133,7 +178,6 @@ public class Main2Activity extends AppCompatActivity
             fragmentTransaction.replace(R.id.fragement_container, volleyErrorList,
                     TAG_CUST_OUTSTANDING_FRAGEMENT);
             fragmentTransaction.commit();
-
 
         }
 

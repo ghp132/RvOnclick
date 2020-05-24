@@ -70,8 +70,10 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
         territories = applicationController.sortTerritoryList(stDatabase.stDao()
                 .getTerritoriesByType(false));
         String[] territoryAdapter = new String[territories.size() + 1];
+
         //adding "All" as the first item of the array adapter
         territoryAdapter[0] = "All";
+
         //creating array adapter for spinner
         int tc = 1;
         for (Territory territory : territories) {
@@ -175,8 +177,10 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
 
     @Override
     public void onResume(){
+        etCustomerSearch.requestFocus();
         etCustomerSearch.selectAll();
         applicationController.showKeyboard(etCustomerSearch,getActivity());
+        etCustomerSearch.selectAll();
         super.onResume();
     }
 
@@ -206,8 +210,12 @@ public class TabFragment1 extends Fragment implements CustomerAdapter.OnItemClic
         }
         customerList.clear();
         customerList.addAll(applicationController.sortCustomerList(filtered));
-        /*customerAdapter = new CustomerAdapter(listener, customerList, getActivity());
-        recyclerView.setAdapter(customerAdapter);*/
         customerAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onPause() {
+        applicationController.hideSoftKeyboard(getActivity());
+        super.onPause();
     }
 }

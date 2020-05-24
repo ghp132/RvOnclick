@@ -1,4 +1,4 @@
 package com.example.RvOnclick.NetworkOperations;
 
-public class PriceList {
+public class ProductGetter {
 }

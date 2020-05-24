@@ -336,6 +336,7 @@ public interface StDao {
     @Query("delete from VolleyErrorRecord")
     void deleteAllErrorRecords();
 
+    //BRAND
     @Insert
     void addBrand(Brand... brand);
 
@@ -344,4 +345,82 @@ public interface StDao {
 
     @Query("select * from Brand")
     List<Brand> getAllBrands();
+
+    @Query("delete from Brand")
+    void deleteAllBrands();
+
+    //WAREHOUSE
+    @Insert
+    void addWarehouse(Warehouse... warehouse);
+
+    @Query("Select count(*) from Warehouse")
+    int countWarehouses();
+
+    @Query("select * from Warehouse where isGroup=0")
+    List<Warehouse> getAllNonGroupWarehouses();
+
+    @Query("delete from Warehouse")
+    void deleteAllWarehouses();
+
+    @Query("select * from Warehouse where company = :companyName AND isGroup=0")
+    List<Warehouse> getNonGroupWarehouseByCompany(String companyName);
+
+    //PRODUCTS LIST
+
+    @Insert
+    List<Long> addProductsList(ProductsList... productsList);
+
+    @Query("select count(*) from ProductsList")
+    int countPrductsList();
+
+    @Query("select * from ProductsList where productsListId = :id")
+    ProductsList getPrductsListById(Long id);
+
+    @Query("delete from ProductsList")
+    void deleteAllProductsList();
+
+    @Query("SELECT editable FROM ProductsList WHERE productsListId = :id")
+    boolean isProductListEditable(Long id);
+
+    @Delete
+    void deleteProductsList(ProductsList... productsLists);
+
+    //PRODUCTS LIST ITEM
+
+    @Insert
+    List<Long> addProductsListItems(ProductsListItem... productsListItems);
+
+    @Query("select * from ProductsListItem where productsListId=:id")
+    List<ProductsListItem> getProductsListItemByProductsListId(Long id);
+
+    @Query("select count(*) from ProductsListItem where productsListId=:id")
+    int countProductsListItemByProductsListId(Long id);
+
+    @Query("select count(*) from ProductsListItem")
+    int countProductsListItems();
+
+    @Query("delete from ProductsListItem")
+    void deleteAllProductsListItems();
+
+    @Query("select * from ProductsListItem where productsListItemId = :id")
+    ProductsListItem getProductsListItemById(Long id);
+
+    @Update
+    void updateProductsListItem(ProductsListItem... listItem);
+
+    @Delete
+    void deleteProductsListItem(ProductsListItem... listItem);
+
+    //STOCK ENTRY
+    @Insert
+    List<Long> addStockEntry(StockEntry... stockEntry);
+
+    @Delete
+    void deleteStockEntry(StockEntry... stockEntries);
+
+    @Query("SELECT * FROM StockEntry WHERE id = :id")
+    StockEntry getStockEntryById(Long id);
+
+
+
 }

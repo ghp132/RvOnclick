@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:key="main_settings">
+
+    <Preference
+        android:id="@+id/pf_spotBilling"
+        android:layout_width="wrap_content"
+        android:key="spotBilling"
+        android:summary="Configure Spot Billing Settings"
+        android:title="Spot Billing" />
+    <ListPreference
+        android:layout_width="wrap_content"
+        android:defaultValue="1"
+        android:entries="@array/default_warehouse_option_labels"
+        android:entryValues="@array/default_warehouse_option_values"
+        android:key="default_warehouse"
+        android:summary="Select the dafault warehouse"
+        android:title="Default Warehouse" />
+    <Preference
+        android:id="@+id/pf_defaultWarehouse"
+        android:layout_width="wrap_content"
+        android:key="def_warehouse"
+        android:summary="Select default warehouses for Companies"
+        android:title="Default Warehouse" />
+    <SwitchPreference
+        android:defaultValue="true"
+        android:id="@+id/cb_allowMultipleItems"
+        android:layout_width="wrap_content"
+        android:key="allow_multiple_items"
+        android:summary="If allowed same item can be added multiple times in the Item list"
+        android:title="Allow Multiple Items in List" />
+    <ListPreference
+        android:defaultValue="0"
+        android:summary="Select the default DocStatus for Invoices."
+        android:entries="@array/docStatuses_labels"
+        android:entryValues="@array/docStatuses_values"
+        android:key="pref_def_invoiceStatus"
+        android:title="Default Invoice Status" />
+    <ListPreference
+        android:defaultValue="0"
+        android:summary="Select the default DocStatus for Payments."
+        android:entries="@array/docStatuses_labels"
+        android:entryValues="@array/docStatuses_values"
+        android:key="pref_def_paymentStatus"
+        android:title="Default Payment Status" />
+
+
+</PreferenceScreen>

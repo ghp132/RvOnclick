@@ -2,7 +2,6 @@ package com.example.RvOnclick;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,7 +14,12 @@ public class Rv1Adapter extends RecyclerView.Adapter<Rv1Adapter.Rv1ViewHolder> {
     public interface OnItemClickListener{
         void onItemClicked(View view, int position);
     }
+
+    public interface OnItemLongClickListener {
+        void onItemLongClicked(View view, int position);
+    }
     private OnItemClickListener listener;
+    private OnItemLongClickListener longClickListener;
     private Context context;
     private List<Rv1Item> itemList;
 
@@ -60,14 +64,23 @@ public class Rv1Adapter extends RecyclerView.Adapter<Rv1Adapter.Rv1ViewHolder> {
                     listener.onItemClicked(v, getAdapterPosition());
                 }
             });
+            itemView.setLongClickable(true);
+            itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    longClickListener.onItemLongClicked(v, getAdapterPosition());
+                    return false;
+                }
+            });
 
         }
     }
 
-    public Rv1Adapter(OnItemClickListener listener, List<Rv1Item> itemList, Context context){
+    public Rv1Adapter(OnItemClickListener listener, OnItemLongClickListener longClickListener, List<Rv1Item> itemList, Context context) {
         this.context = context;
         this.itemList = itemList;
         this.listener = listener;
+        this.longClickListener = longClickListener;
     }
 
     public void updateRv1Adapter(List<Rv1Item> newList){

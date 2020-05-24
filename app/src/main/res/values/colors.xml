@@ -6,4 +6,5 @@
     <color name="brand">#efecec</color>
     <color name="productName">#222222</color>
     <color name="progressBarBg">#80FFFFFF</color>
+    <color name="buttonGreen">#4CAF50</color>
 </resources>

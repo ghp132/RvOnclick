@@ -23,7 +23,7 @@ import java.io.UnsupportedEncodingException;
 
 import static com.android.volley.VolleyLog.TAG;
 
-public class Brand {
+public class BrandGetter {
     public interface brandReceivedListener {
         void onBrandReceived(int synced, int requestCode, int resultCode, String info);
     }

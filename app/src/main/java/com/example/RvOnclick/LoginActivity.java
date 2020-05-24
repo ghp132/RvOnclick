@@ -16,6 +16,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -23,7 +24,10 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.RvOnclick.NetworkOperations.Territory;
+import com.example.RvOnclick.NetworkOperations.BrandGetter;
+import com.example.RvOnclick.NetworkOperations.SalesInvoiceCreator;
+import com.example.RvOnclick.NetworkOperations.TerritoryGetter;
+import com.example.RvOnclick.NetworkOperations.WarehouseGetter;
 import com.opencsv.CSVReader;
 
 import org.json.JSONArray;
@@ -45,10 +49,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class LoginActivity extends AppCompatActivity implements Territory.territoryReceivedListener {
+public class LoginActivity extends AppCompatActivity implements TerritoryGetter.territoryReceivedListener,
+        BrandGetter.brandReceivedListener, WarehouseGetter.warehouseReceivedListener, SalesInvoiceCreator.IOnInvoicePostedListener {
     EditText tvLoginEmail, tvLoginPassword, tvUrl;
     Button btLogin, btGetData, btNextActivity, btPostOrders, btPostPayments,
-            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig, btEggSales;
+            btUpdateUnknownPayments, btUpdateUnknownOrders, btConfig, btEggSales, btStockTransfer;
     String loginEmail, loginPassword, loginUrl, siteUrl;
     public static StDatabase stDatabase;
     public boolean newData;
@@ -57,6 +62,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
     FrameLayout pbLl;
     int requestCounter, responseCounter;
     TextView tvResponseDisplay;
+    int orderCount, orderPostResponseCount;
 
 
     @Override
@@ -76,6 +82,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
         btUpdateUnknownOrders = findViewById(R.id.bt_updateOrderStatus);
         btConfig = findViewById(R.id.bt_config);
         btEggSales = findViewById(R.id.bt_eggSales);
+        btStockTransfer = findViewById(R.id.bt_stockTransfer);
         pbLl = findViewById(R.id.linlaProgressBar);
         newData = false;
         tvResponseDisplay = findViewById(R.id.tv_responseDisplay);
@@ -86,13 +93,27 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                 .allowMainThreadQueries().fallbackToDestructiveMigration().build();
         //ac.pay4sms(this,"f9c537bc392449647a2055b008cc346b",1,"message from volley","9092747505");
 
+        final TerritoryGetter.territoryReceivedListener listener = this;
+        final BrandGetter.brandReceivedListener brandListener = this;
+        final WarehouseGetter.warehouseReceivedListener warehouseListener = this;
+        final SalesInvoiceCreator.IOnInvoicePostedListener onInvoicePostedListener = this;
+
 
         List<com.example.RvOnclick.Territory> tList = stDatabase.stDao().getTerritoriesByType(false);
         String tText = "";
         for (com.example.RvOnclick.Territory territory : tList) {
             tText = tText + "\n" + territory.getTerritoryName();
         }
-        tvResponseDisplay.setText(tText);
+        //tvResponseDisplay.setText(tText);
+
+        btStockTransfer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent m2aIntent = new Intent(getApplicationContext(), Main2Activity.class);
+                m2aIntent.putExtra("fragment", Utils.STOCK_TRANSFER_WAREHOUSE_FRAGMENT);
+                startActivity(m2aIntent);
+            }
+        });
 
 
 
@@ -127,7 +148,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                     info = info + uc.getFullName() + "\n" + uc.getSendSms() + "\n\n";
 
                 }
-                tvResponseDisplay.setText(info);
+                //tvResponseDisplay.setText(info);
             }
         });
 
@@ -194,10 +215,25 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
         btPostOrders.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 requestCounter = 1;
                 responseCounter = 0;
-                pbLl.setVisibility(View.VISIBLE);
-                postOrders(getApplicationContext());
+
+                //postOrders(getApplicationContext());
+
+                List<Order> unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
+                for (Order order : unsycedOrderList) {
+                    ac.splitProductListByCompany(order, stDatabase);
+
+                }
+                unsycedOrderList = stDatabase.stDao().getUnsyncedOrders();
+                orderCount = unsycedOrderList.size();
+                if (unsycedOrderList.size() > 0) pbLl.setVisibility(View.VISIBLE);
+                for (Order order : unsycedOrderList) {
+                    new SalesInvoiceCreator().postInvoices(getApplicationContext(), stDatabase, Utils.REQ_POST_INVOICE_FROM_LOGIN_ACTIVITY, onInvoicePostedListener, order);
+                }
+
+
             }
         });
 
@@ -214,7 +250,6 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
             }
         });
 
-        final Territory.territoryReceivedListener listener = this;
 
 
         //getting Items
@@ -280,9 +315,20 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                 if (stDatabase.stDao().countTerritory() != 0) {
                     stDatabase.stDao().deleteAllTerritories();
                 }
-                Territory netTerritory = new Territory();
+                TerritoryGetter netTerritory = new TerritoryGetter();
                 netTerritory.getTerritory(getApplicationContext(), stDatabase, 1, listener);
 
+                if (stDatabase.stDao().countBrands() != 0) {
+                    stDatabase.stDao().deleteAllBrands();
+                }
+                BrandGetter netBrand = new BrandGetter();
+                netBrand.getBrands(getApplicationContext(), stDatabase, 1, brandListener);
+
+                if (stDatabase.stDao().countWarehouses() != 0) {
+                    stDatabase.stDao().deleteAllWarehouses();
+                }
+                WarehouseGetter warehouseGetter = new WarehouseGetter();
+                warehouseGetter.getWarehouse(getApplicationContext(), stDatabase, 1, warehouseListener);
 
             }
         });
@@ -606,18 +652,27 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                                 try {
                                     body = new String(error.networkResponse.data, "UTF-8");
                                     //tvResponseDisplay.setText(body);
-                                    ac.displayNetworkError(body, getApplicationContext());
-                                    Log.d(TAG, "onErrorResponse: postOrders" + body);
+                                    VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                                    errorRecord.setOrgin("Posting Invoice");
+                                    errorRecord.setErrorBody(body);
+                                    errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                                    stDatabase.stDao().addErrorRecord(errorRecord);
+                                    Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
+                                    //Log.d(TAG, "onErrorResponse: postOrders" + body);
                                 } catch (UnsupportedEncodingException e) {
                                     e.printStackTrace();
                                     Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
-
-
                                 }
                             }
+                        } else {
+                            VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                            errorRecord.setOrgin("Posting Invoice");
+                            errorRecord.setErrorBody(error.toString());
+                            errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                            stDatabase.stDao().addErrorRecord(errorRecord);
+                            Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
                         }
 
-                        //textView.setText(error.toString());
                     }
                 }
                 );
@@ -738,18 +793,56 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                         try {
                             body = new String(error.networkResponse.data, "UTF-8");
                             //tvResponseDisplay.setText(body);
-                            Log.d(TAG, "onErrorResponse: postOrders" + body);
+                            VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                            errorRecord.setOrgin("Posting Invoice");
+                            errorRecord.setErrorBody(body);
+                            errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                            stDatabase.stDao().addErrorRecord(errorRecord);
+                            Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
+                            //Log.d(TAG, "onErrorResponse: postOrders" + body);
                         } catch (UnsupportedEncodingException e) {
                             e.printStackTrace();
                             Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
-
-
                         }
                     }
+                } else {
+                    VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                    errorRecord.setOrgin("Posting Invoice");
+                    errorRecord.setErrorBody(error.toString());
+                    errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                    stDatabase.stDao().addErrorRecord(errorRecord);
+                    Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
                 }
             }
         });
         MySingleton.getInstance(ctx).addToRequestQueue(jsonObjectRequest);
+    }
+
+    private void processError(VolleyError error, String origin) {
+        if (error.networkResponse != null) {
+            if (error.networkResponse.data != null) {
+                String body = "";
+                try {
+                    body = new String(error.networkResponse.data, "UTF-8");
+                    VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                    errorRecord.setOrgin(origin);
+                    errorRecord.setErrorBody(body);
+                    errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                    stDatabase.stDao().addErrorRecord(errorRecord);
+                    Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } else {
+            VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+            errorRecord.setOrgin(origin);
+            errorRecord.setErrorBody(error.toString());
+            errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+            stDatabase.stDao().addErrorRecord(errorRecord);
+            Toast.makeText(getApplicationContext(), "See error log.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     public void showDetail(View view) {
@@ -920,6 +1013,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
+                        tvResponseDisplay.setText(response.toString());
                         try {
                             JSONArray json = response.getJSONArray("data");
                             //Log.d(TAG, "onResponse: syncItems: response" + response.toString());
@@ -939,6 +1033,14 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                                 String product_group = item.getString("item_group");
                                 String product_rate = item.getString("standard_rate");
                                 String company = item.getString("company");
+                                String stockUom = item.getString("stock_uom");
+                                String salesUom = item.getString("sales_uom");
+
+                                Double salesUomConversionFactor;
+                                if (item.getString("stockem_sales_uom_conversion").equals("null")) {
+                                    salesUomConversionFactor = 1.0;
+                                } else
+                                    salesUomConversionFactor = item.getDouble("stockem_sales_uom_conversion");
                                 Log.d(TAG, "onResponse: syncItems: Items:" + product_code + "Company" + company);
 
 
@@ -950,6 +1052,12 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                                 product.setProductGroup(product_group);
                                 product.setProductRate(Double.parseDouble(product_rate));
                                 product.setProductCompany(company);
+                                product.setStockUom(stockUom);
+                                if (salesUom.equals("null")) {
+                                    salesUom = stockUom;
+                                }
+                                product.setDefaultSalesUom(salesUom);
+                                product.setDefSalesUomConversion(salesUomConversionFactor);
 
                                 stDatabase.stDao().addProduct(product);
 
@@ -964,6 +1072,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
 
                         } catch (JSONException e) {
                             e.printStackTrace();
+                            tvResponseDisplay.setText(e.toString());
                             Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_SHORT).show();
                         }
                         //tvResponseDisplay.setText("syncItemError");
@@ -1096,22 +1205,24 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                String body=error.toString();
+                String body = error.toString();
                 error.printStackTrace();
                 responseCounter += 1;
                 handleProgressBar();
                 Toast.makeText(getApplicationContext(), "Error in receiving Customer JSON", Toast.LENGTH_SHORT).show();
                 //tvResponseDisplay.setText("syncCustomerError");
-                if (error.networkResponse.data!=null){
-                    try{
-                        body = new String(error.networkResponse.data,"UTF-8");
-                        tvResponseDisplay.setText(body);
-                        Log.d(TAG, "onErrorResponse: SyncCustomer" + body);
-                    }catch (UnsupportedEncodingException e){
-                        e.printStackTrace();
-                        Toast.makeText(ctx, "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                if (error.networkResponse != null) {
+                    if (error.networkResponse.data != null) {
+                        try {
+                            body = new String(error.networkResponse.data, "UTF-8");
+                            //tvResponseDisplay.setText(body);
+                            Log.d(TAG, "onErrorResponse: SyncCustomer" + body);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            Toast.makeText(ctx, "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
 
 
+                        }
                     }
                 }
             }
@@ -1241,7 +1352,7 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
         String url = loginUrl + "/api/method/frappe.auth.get_logged_user";
     }
 
-    public void login(Context ctx) {
+    public void login(final Context ctx) {
         loginUrl = tvUrl.getText().toString();
         loginPassword = tvLoginPassword.getText().toString();
         loginEmail = tvLoginEmail.getText().toString();
@@ -1319,6 +1430,18 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
 
             }
 
+
+            @Override
+            protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                // since we don't know which of the two underlying network vehicles
+                // will Volley use, we have to handle and store session cookies manually
+                Log.i("response", response.headers.toString());
+                Log.d(TAG, "parseNetworkResponse");
+                Map<String, String> responseHeaders = response.headers;
+                String rawCookies = responseHeaders.get("Set-Cookie");
+                Log.i("cookies", rawCookies);
+                return super.parseNetworkResponse(response);
+            }
 
         };
         MySingleton.getInstance(ctx).addToRequestQueue(stringRequest);
@@ -1633,9 +1756,31 @@ public class LoginActivity extends AppCompatActivity implements Territory.territ
     public void onTerritoryReceived(int synced, int requestCode, int resultCode, String info) {
         if (requestCode == 1) {
             Toast.makeText(this, info, Toast.LENGTH_SHORT).show();
-            tvResponseDisplay.setText("for requestCode1: " + info);
-        } else tvResponseDisplay.setText("no requestcode." + info);
+        }
 
 
+    }
+
+    @Override
+    public void onBrandReceived(int synced, int requestCode, int resultCode, String info) {
+        if (requestCode == 1) {
+            Toast.makeText(this, info, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onWarehouseReceived(int synced, int requestCode, int resultCode, String info) {
+        if (requestCode == 1) {
+            Toast.makeText(this, info, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onInvoicePosted(int postedStatus, int requestCode, int resultCode, long orderId, int noOfInvoices, int invoiceCount, Invoice postedInvoice, String info) {
+        //orderPostResponseCount++;
+        if (invoiceCount == orderCount) {
+            pbLl.setVisibility(View.GONE);
+        }
+        Toast.makeText(this, info, Toast.LENGTH_SHORT).show();
     }
 }

@@ -23,6 +23,15 @@ public class Invoice {
     private String invoiceItems;
     private int docStatus;
     private Long orderId;
+    private String warehouse;
+
+    public String getWarehouse() {
+        return warehouse;
+    }
+
+    public void setWarehouse(String warehouse) {
+        this.warehouse = warehouse;
+    }
 
     public Long getOrderId() {
         return orderId;

@@ -19,7 +19,7 @@ import org.json.JSONObject;
 
 import java.util.List;
 
-public class InvoiceStatusUpdate {
+public class InvoiceStatusUpdater {
     public interface invoiceStatusUpdateListener {
         void onInvoiceStatusUpdated(int updated, int requestCode, int resultCode, List<Order> orders);
     }

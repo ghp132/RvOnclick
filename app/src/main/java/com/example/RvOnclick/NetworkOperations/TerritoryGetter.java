@@ -24,7 +24,7 @@ import java.io.UnsupportedEncodingException;
 
 import static com.android.volley.VolleyLog.TAG;
 
-public class Territory {
+public class TerritoryGetter {
     public interface territoryReceivedListener {
         void onTerritoryReceived(int synced, int requestCode, int resultCode, String info);
     }

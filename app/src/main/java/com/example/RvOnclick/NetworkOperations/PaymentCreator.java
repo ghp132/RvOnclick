@@ -1,6 +1,7 @@
 package com.example.RvOnclick.NetworkOperations;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.android.volley.Request;
@@ -31,9 +32,15 @@ public class PaymentCreator {
     public void postPayment(Context ctx, final StDatabase stDatabase, final int requestCode,
                             final IOnPaymentPostedListener listener,
                             List<com.example.RvOnclick.Payment> payments) {
+
+        //getting values from preferences
+        SharedPreferences sharedPreferences = ctx.getSharedPreferences(Utils.MAIN_SETTINGS, Context.MODE_PRIVATE);
+        int defDocStatus = Integer.valueOf(sharedPreferences.getString("pref_def_paymentStatus", "0"));
+
         UserConfig uc = new UserConfig();
         String url = uc.getLoginUrl();
         String info = "";
+
         int paymentCount = 0;
         if (payments.isEmpty()) {
             info = "No payments in List";
@@ -95,6 +102,7 @@ public class PaymentCreator {
                     jsonObjPayment.put("payment_type", paymentType);
                     jsonObjPayment.put("paid_amount", paidAmount);
                     jsonObjPayment.put("app_payment_id", appPaymentId);
+                    jsonObjPayment.put("docstatus", defDocStatus);
 
                 } catch (JSONException e) {
                     e.printStackTrace();

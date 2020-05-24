@@ -1,11 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".LoginActivity">
 
+
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/cl_progressContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#68CAC8C8"
+        android:visibility="gone"
+        tools:layout_editor_absoluteY="538dp">
+
+        <android.support.constraint.ConstraintLayout
+            android:id="@+id/cl_pbTvContainerLoginAct"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ProgressBar
+                android:id="@+id/progressBar4"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintEnd_toStartOf="@+id/tv_loginActPb"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_loginActPb"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="8dp"
+                android:text="Please wait...."
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/progressBar4"
+                app:layout_constraintTop_toTopOf="parent" />
+        </android.support.constraint.ConstraintLayout>
+
+    </android.support.constraint.ConstraintLayout>
 
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
@@ -54,8 +97,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_weight="2" >
-    </ProgressBar>
+        android:layout_weight="2"
+        android:visibility="gone"></ProgressBar>
 
     <Button
         android:id="@+id/bt_login"
@@ -93,7 +136,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Order Status" />
+        android:text="Order Status"
+        android:visibility="gone" />
 
     <Button
         android:id="@+id/bt_nextActivity"
@@ -108,6 +152,11 @@
         android:text="Post Payments" />
 
 
+    <Button
+        android:id="@+id/bt_stockTransfer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stock Transfer" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -153,7 +202,7 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -167,7 +216,6 @@
                 android:textIsSelectable="true" />
         </LinearLayout>
     </ScrollView>
-
 
 
 </LinearLayout>

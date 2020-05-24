@@ -21,8 +21,13 @@
     <string name="menu_share">Share</string>
     <string name="menu_send">Send</string>
     <string name="app_title">Stockem</string>
+    <string name="menu_stock_transfer">Stock Transfer</string>
 
 
     <!--VOLLEY ERROR RECORD ORIGIN-->
     <string name="territory">Territory</string>
+    <string name="warehouse">Warehouse</string>
+    <string name="loginStatus">Login Status</string>
+    <string name="stockEntry">Stock Entry</string>
+    <string name="salesInvoiceCreation">Sales Invoice Creation</string>
 </resources>

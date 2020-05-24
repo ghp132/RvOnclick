@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="pref_spotBill_bundle_rate_option_labels">
+
+    </array>
+    <array name="default_warehouse_option_labels">
+        <item>"Stores"</item>
+    </array>
+    <array name="default_warehouse_option_values">
+        <item>1</item>
+    </array>
+    <array name="docStatuses_labels">
+        <item>Draft</item>
+        <item>Submitted</item>
+    </array>
+
+    <array name="docStatuses_values">
+        <item>"0"</item>
+        <item>"1"</item>
+    </array>
+</resources>

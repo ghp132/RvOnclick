@@ -43,6 +43,7 @@ public class DialogFragment_PaymentInfo extends DialogFragment {
     Integer mYear, mMonth, mDay;
     Long paymentId, oldPaymentid, orderId;
     Boolean previouslyPaid;
+
     ApplicationController ac = new ApplicationController();
     int smsPermissionGranted;
     String uniquePaymentId;

@@ -68,7 +68,18 @@ public class ApplicationController {
         return sortList;
     }
 
-    public static void hideSoftKeyboard(Activity activity) {
+    public List<Brand> sortBrandList(List<Brand> sortList) {
+        //sorts brand list
+        Collections.sort(sortList, new Comparator<Brand>() {
+            @Override
+            public int compare(Brand o1, Brand o2) {
+                return o1.getBrandName().compareToIgnoreCase(o2.getBrandName());
+            }
+        });
+        return sortList;
+    }
+
+    public void hideSoftKeyboard(Activity activity) {
         View focusedView = activity.getCurrentFocus();
         if (focusedView != null) {
             InputMethodManager inputMethodManager = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -186,10 +197,10 @@ public class ApplicationController {
     }
 
     public void getCompanyAddress(String siteUrl, final Context ctx, final StDatabase stDatabase,
-                                  String addressName, final String companyName) {
+                                  final String addressName, final String companyName) {
         String url = siteUrl + "/api/resource/Address/?fields=[\"*\"]";
         if (addressName != null) {
-            url = url + "&[[\"Address\",\"name\",\"=\"," + addressName + "]]";
+            url = url + "&filters=[[\"Address\",\"name\",\"=\",\"" + addressName + "\"]]";
         }
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET, url, null,
@@ -200,6 +211,7 @@ public class ApplicationController {
                         JSONObject address = new JSONObject();
                         try {
                             data = response.getJSONArray("data");
+                            Log.d(TAG, "onResponse: getCompanyAddress: " + addressName + ": " + data.toString());
                             for (int i = 0; i < data.length(); i++) {
                                 address = data.getJSONObject(i);
                                 String addressLine1 = address.getString("address_line1");
@@ -601,7 +613,7 @@ public class ApplicationController {
 
 
     public interface OnPriceProcessedListener {
-        void onPriceProcessed(int position);
+        void onPriceProcessed(int position, List<Product> productList);
     }
 
     public interface OnInvoicePostedListener {
@@ -1183,4 +1195,58 @@ public class ApplicationController {
         m2aIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         ctx.startActivity(m2aIntent);
     }
+
+    private void processError(Context ctx, VolleyError error, String origin) {
+        if (error.networkResponse != null) {
+            if (error.networkResponse.data != null) {
+                String body = "";
+                try {
+                    body = new String(error.networkResponse.data, "UTF-8");
+                    VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                    errorRecord.setOrgin(origin);
+                    errorRecord.setErrorBody(body);
+                    errorRecord.setTimeStamp(createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                    stDatabase.stDao().addErrorRecord(errorRecord);
+                    Toast.makeText(ctx, "See error log.", Toast.LENGTH_SHORT).show();
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                    Toast.makeText(ctx, "UnsupportedEncodingException", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } else {
+            VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+            errorRecord.setOrgin(origin);
+            errorRecord.setErrorBody(error.toString());
+            errorRecord.setTimeStamp(createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+            stDatabase.stDao().addErrorRecord(errorRecord);
+            Toast.makeText(ctx, "See error log.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public String getCompanyName(String productCode, StDatabase stDatabase) {
+        //returns the Company name for items if added or returns a default company name if not added
+
+        String companyName = stDatabase.stDao().getProductByProductCode(productCode).getProductCompany();
+        boolean companyDefaultSet = false;
+        if (companyName == null || companyName.equals("null")) {
+            //company name might be null if company name has not been added to the Company custom field for Item
+            //hence default company will be added to those
+            //if no default company is set presumably the first company will be added
+            List<Company> companies = stDatabase.stDao().getAllCompanies();
+            for (Company company : companies) {
+                if (company.getIsDefault() == 1) {
+                    companyName = company.getCompanyName();
+                    companyDefaultSet = true;
+                    break;
+                }
+            }
+            if (!companyDefaultSet) {
+                companyName = companies.get(0).getCompanyName();
+            }
+        }
+
+        return companyName;
+    }
+
+
 }

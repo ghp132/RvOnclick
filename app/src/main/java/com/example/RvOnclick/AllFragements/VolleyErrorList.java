@@ -27,7 +27,7 @@ import java.util.List;
  * Use the {@link VolleyErrorList#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class VolleyErrorList extends Fragment implements Rv1Adapter.OnItemClickListener {
+public class VolleyErrorList extends Fragment implements Rv1Adapter.OnItemClickListener, Rv1Adapter.OnItemLongClickListener {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -37,6 +37,7 @@ public class VolleyErrorList extends Fragment implements Rv1Adapter.OnItemClickL
     RecyclerView recyclerView;
     Rv1Adapter adapter;
     Rv1Adapter.OnItemClickListener listener;
+    Rv1Adapter.OnItemLongClickListener longClickListener;
     StDatabase stDatabase;
     List<Rv1Item> rv1ItemList = new ArrayList<>();
     ApplicationController ac = new ApplicationController();
@@ -94,7 +95,9 @@ public class VolleyErrorList extends Fragment implements Rv1Adapter.OnItemClickL
 
         recyclerView = view.findViewById(R.id.rv_volleyErrorList);
         listener = this;
-        adapter = new Rv1Adapter(listener, rv1ItemList, getActivity());
+        longClickListener = this;
+
+        adapter = new Rv1Adapter(listener, longClickListener, rv1ItemList, getActivity());
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -130,5 +133,10 @@ public class VolleyErrorList extends Fragment implements Rv1Adapter.OnItemClickL
         VolleyErrorRecord errorRecord = stDatabase.stDao()
                 .getVolleyErrorRecordById(Long.valueOf(rv1ItemList.get(position).getIntId()));
         ac.displayNetworkError(errorRecord.getErrorBody(), getActivity());
+    }
+
+    @Override
+    public void onItemLongClicked(View view, int position) {
+
     }
 }

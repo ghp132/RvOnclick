@@ -18,9 +18,10 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="2dp"
         android:singleLine="false"
         android:textColor="@color/productName"
-        android:textSize="16dp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <RelativeLayout
@@ -61,6 +62,15 @@
             android:layout_marginTop="0dp"
             android:layout_toEndOf="@+id/tvCount" />
     </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/item_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@+id/rl_info"
+        android:layout_marginTop="1dp"
+        android:background="@android:color/holo_green_light"
+        android:orientation="horizontal"></LinearLayout>
 
 
 </RelativeLayout>

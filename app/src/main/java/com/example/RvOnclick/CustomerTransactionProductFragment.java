@@ -4,8 +4,10 @@ package com.example.RvOnclick;
 import android.app.ProgressDialog;
 import android.arch.persistence.room.Room;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -16,7 +18,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -43,9 +48,13 @@ ApplicationController.OnPriceProcessedListener{
     private OnItemProcessedListener itemProcessedListener;
     private ApplicationController.OnPriceProcessedListener priceProcessedListener;
     EditText productSearchBox;
+    Spinner spBrandList;
     ProgressDialog progressDialog;
-    public static String TAG = "CustomerTransactionFragment";
+    public static String TAG = "CustomerTransactionProductFragment";
     private String priceList;
+    List<Brand> brands;
+    String warehouse;
+    public boolean itemsFiltered;
 
     public CustomerTransactionProductFragment() {
         // Required empty public constructor
@@ -57,9 +66,33 @@ ApplicationController.OnPriceProcessedListener{
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_customer_transaction_product, container, false);
+        spBrandList = view.findViewById(R.id.sp_brandList);
+
         stDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), StDatabase.class, "StDB")
                 .allowMainThreadQueries().build();
         ApplicationController ac = new ApplicationController();
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        warehouse = sharedPreferences.getString("default_warehouse", "Stores - "
+                + stDatabase.stDao().getAbbrByCompanyName(stDatabase.stDao().
+                getDefaultCompany().getCompanyName()));
+
+        brands = ac.sortBrandList(stDatabase.stDao().getAllBrands());
+        String[] brandArray = new String[brands.size() + 1];
+
+        //adding 'all' as the first element of the dropdown list
+        brandArray[0] = "All";
+
+        //creating array adapter for spinner
+        int bc = 1;
+        for (Brand brand : brands) {
+            brandArray[bc] = brand.getBrandName();
+            bc++;
+        }
+        ArrayAdapter<String> brandAdapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_dropdown_item, brandArray);
+        spBrandList.setAdapter(brandAdapter);
+
+
         fragmentId=this.getId();
         stDatabase.stDao().resetCurrentOrderQty();
 
@@ -85,6 +118,7 @@ ApplicationController.OnPriceProcessedListener{
         if (priceList.equals("null")) {
             priceList = "Standard Selling";
         }
+        productList = sortProductList(productList);
 
         getActivity().getIntent().putExtra("priceList", "Standard Selling");
         if (priceList != null) {
@@ -100,14 +134,13 @@ ApplicationController.OnPriceProcessedListener{
 
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-        productList = sortProductList(productList);
 
         itemProcessedListener = this;
         listener = this;
         productAdapter = new ProductAdapter(listener, productList, getActivity());
         recyclerView.setAdapter(productAdapter);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-        productAdapter.notifyDataSetChanged();
+        //productAdapter.notifyDataSetChanged();
         if (orderId != -1) {
             new UpdateCurrentOrderQty(productList).execute();
         }
@@ -122,19 +155,7 @@ ApplicationController.OnPriceProcessedListener{
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // fires up when there is any change in the search text box
-                List<Product> filtered = new ArrayList<>();
-                searchableProductList = stDatabase.stDao().getProduct();
-                for (Product product : searchableProductList) {
-                    String searchString = product.getProductName().toLowerCase();
-                    if (searchString.contains(productSearchBox.getText().toString().toLowerCase())) {
-                        filtered.add(product);
-                    }
-                }
-
-                productList.clear();
-                productList.addAll(sortProductList(filtered));
-                productAdapter.notifyDataSetChanged();
-
+                filterProducts();
 
             }
 
@@ -144,6 +165,20 @@ ApplicationController.OnPriceProcessedListener{
 
             }
         });
+
+
+        spBrandList.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                filterProducts();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
 
         return view;
     }
@@ -175,11 +210,14 @@ ApplicationController.OnPriceProcessedListener{
             String prodCode = productList.get(position).getProductCode();
             double rate = productList.get(position).getProductRate();
 
+
             Bundle args = new Bundle();
             args.putString("prodCode", prodCode);
             args.putString("custCode", custCode);
             args.putString("orderId", String.valueOf(orderId));
             args.putDouble("rate", rate);
+            args.putString("warehouse", warehouse);
+
 
 
             DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();
@@ -208,14 +246,14 @@ ApplicationController.OnPriceProcessedListener{
 
 
     @Override
-    public void onItemProcessed(Product product, int position) {
+    public void onItemQtyAdded(Product product, int position) {
         productList.remove(position);
         productList.add(position, product);
         productAdapter.notifyItemChanged(position);
     }
 
     @Override
-    public void onPriceProcessed(final int position) {
+    public void onPriceProcessed(final int position, final List<Product> productListFromAsyncTask) {
         try {
             getActivity().runOnUiThread(new Runnable() {
 
@@ -226,6 +264,7 @@ ApplicationController.OnPriceProcessedListener{
 
                     //productList.remove(position);
                     //productList.add(position, product);
+                    productList.set(position, productListFromAsyncTask.get(position));
                     productAdapter.notifyItemChanged(position);
 
                 }
@@ -274,7 +313,7 @@ ApplicationController.OnPriceProcessedListener{
                             }
                         }
                         //itemProcessedListener2.onItemProcessed(product,positionOfProduct);
-                        try {
+                        /*try {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -283,9 +322,10 @@ ApplicationController.OnPriceProcessedListener{
                             });
                             //onProgressUpdate(positionOfProduct);
                         } catch (NullPointerException e) {
-                            Log.d(TAG, "doInBackground: calling onProgressUpdate");
+                            Log.d(TAG, "doInBackground: calling onProgressUpdate: NullPointerException");
                             e.printStackTrace();
-                        }
+                        }*/
+                        publishProgress(positionOfProduct);
                         //onProgressUpdate(positionOfProduct);
                         break;
                     }
@@ -307,6 +347,7 @@ ApplicationController.OnPriceProcessedListener{
 
                         // Stuff that updates the UI
                         productAdapter.notifyItemChanged(values[0]);
+                        Log.d(TAG, "run: onProgressUpdate Added Qty: values: " + values[0]);
 
                     }
                 });
@@ -320,8 +361,11 @@ ApplicationController.OnPriceProcessedListener{
     }
 
     private static class UpdatePrices extends AsyncTask<String,Integer,Void>{
+        //this class updates prices for each item from the default price list for the selected customer
+        //default price list is from erp
         List<Product> at2ProductList=new ArrayList<>();
         String priceList;
+
         ApplicationController.OnPriceProcessedListener priceProcessedListener;
         UpdatePrices(List<Product> at2ProductList, String priceList, ApplicationController.OnPriceProcessedListener priceProcessedListener) {
             this.at2ProductList.addAll(at2ProductList);
@@ -332,11 +376,7 @@ ApplicationController.OnPriceProcessedListener{
         @Override
         protected Void doInBackground(String... strings) {
             List<Price> prices = stDatabase.stDao().getPricesByPriceList(priceList);
-            //getActivity().getIntent().putExtra("priceList", "Standard Selling");
             if (priceList != null) {
-                //getActivity().getIntent().putExtra("priceList", priceList);
-                //getActivity().getIntent().putExtra("territory", customer.getTerritory());
-
 
                 stDatabase.stDao().resetProductRate();
 
@@ -346,16 +386,18 @@ ApplicationController.OnPriceProcessedListener{
                     for (Product product : at2ProductList) {
                         Product updatedProduct;
                         String prodCode = product.getProductCode();
-                        Log.d(TAG, "onCreateView: prodCode");
+                        //Log.d(TAG, "onCreateView: prodCode");
                         if (prodCodeFromPrices.equals(prodCode)) {
                             int indexOfProduct = at2ProductList.indexOf(product);
                             updatedProduct = product;
                             updatedProduct.setProductRate(p.getPrice());
                             //check later
                             stDatabase.stDao().updateProduct(updatedProduct);
-                            //at2ProductList.set(indexOfProduct, product);
-                            Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
+                            at2ProductList.set(indexOfProduct, product);
+                            //Log.d(TAG, "onCreateView: SettingPrice" + product.getProductName() + "|" + product.getProductRate());
                             //if ()
+                            Log.d(TAG, "doInBackground: UpdatePrices: before publishing" +
+                                    " progress indexOFProduct: " + indexOfProduct + " " + prodCode + " " + updatedProduct.getProductRate());
                             publishProgress(indexOfProduct);
                             break;
                         }
@@ -368,23 +410,29 @@ ApplicationController.OnPriceProcessedListener{
 
         @Override
         protected void onProgressUpdate(final Integer... values) {
-            priceProcessedListener.onPriceProcessed(values[0]);
-            /* try {
-                .runOnUiThread(new Runnable() {
-
-                    @Override
-                    public void run() {
-
-                        // Stuff that updates the UI
-                        productAdapter.notifyItemChanged(values[0]);
-
-                    }
-                });
-            } catch (NullPointerException e){
-                Log.d(TAG, "onProgressUpdate: "+e.toString());
-                e.printStackTrace();
-            }*/
+            priceProcessedListener.onPriceProcessed(values[0], at2ProductList);
         }
+    }
+
+    private void filterProducts() {
+        List<Product> filtered = new ArrayList<>();
+        searchableProductList = stDatabase.stDao().getProduct();
+        Log.d(TAG, "filterProducts: called");
+        for (Product product : searchableProductList) {
+            String searchString = product.getProductName().toLowerCase();
+            if (searchString.contains(productSearchBox.getText().toString().toLowerCase())) {
+                if (spBrandList.getSelectedItemId() != 0) {
+                    String brandName = spBrandList.getSelectedItem().toString();
+                    if (product.getProductBrand().equals(brandName)) {
+                        filtered.add(product);
+                    }
+                } else filtered.add(product);
+            }
+        }
+
+        productList.clear();
+        productList.addAll(sortProductList(filtered));
+        productAdapter.notifyDataSetChanged();
     }
 
 }

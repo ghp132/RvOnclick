@@ -1,6 +1,7 @@
 package com.example.RvOnclick.NetworkOperations;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -13,10 +14,12 @@ import com.example.RvOnclick.Invoice;
 import com.example.RvOnclick.MySingleton;
 import com.example.RvOnclick.Order;
 import com.example.RvOnclick.OrderProduct;
+import com.example.RvOnclick.R;
 import com.example.RvOnclick.StDatabase;
 import com.example.RvOnclick.User;
 import com.example.RvOnclick.UserConfig;
 import com.example.RvOnclick.Utils;
+import com.example.RvOnclick.VolleyErrorRecord;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,9 +30,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import static com.android.volley.VolleyLog.TAG;
-
 public class SalesInvoiceCreator {
+
+    private static String TAG = "SalesInvoiceCreator";
 
     private int noOfProcessedInvoices = 0;
 
@@ -43,6 +46,11 @@ public class SalesInvoiceCreator {
                              final IOnInvoicePostedListener listener, final Order orderToPost) {
         JSONObject params = new JSONObject();
         final ApplicationController ac = new ApplicationController();
+
+        //getting values from preferences
+        SharedPreferences sharedPreferences = ctx.getSharedPreferences(Utils.MAIN_SETTINGS, Context.MODE_PRIVATE);
+        int defDocStatus = Integer.valueOf(sharedPreferences.getString("pref_def_invoiceStatus", "1"));
+
         List<Order> orderList = new ArrayList<>();
         //adding order to ArrayList because of having already coded with ArrayList
         orderList.add(orderToPost);
@@ -143,6 +151,7 @@ public class SalesInvoiceCreator {
                 params.put("items", jsonArray);
                 params.put("app_invoice_id", appOrderId);
                 params.put("update_stock", "1");
+                params.put("docstatus", defDocStatus);
 
 
                 taxes = ac.getTaxArray(orderId, stDatabase);
@@ -157,7 +166,7 @@ public class SalesInvoiceCreator {
                         orderId, noOfInvoices, noOfProcessedInvoices, null, info);
 
             }
-
+            Log.d(TAG, "postInvoices: params: " + params.toString());
             final String loginUrl = uc.getLoginUrl();
             String url = loginUrl + "/api/resource/Sales%20Invoice/";
             JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
@@ -179,6 +188,10 @@ public class SalesInvoiceCreator {
                                 stDatabase.stDao().createInvoice(newInvoice);
                                 //ac.updatePaymentFromOrder(orderId, stDatabase);
                                 String info = "Invoice done";
+
+                                //updating outstanding invoice info
+                                ac.updateInvoiceAndPayment(rJson, orderId, stDatabase);
+
                                 listener.onInvoicePosted(Utils.SUCCESS, requestCode,
                                         Utils.VOLLEY_SUCCESS, orderId, noOfInvoices,
                                         noOfProcessedInvoices, newInvoice, info);
@@ -211,7 +224,14 @@ public class SalesInvoiceCreator {
                             try {
                                 body = new String(error.networkResponse.data, "UTF-8");
                                 //tvResponseDisplay.setText(body);
-                                listener.onInvoicePosted(Utils.UNKNOWN, requestCode,
+
+                                VolleyErrorRecord errorRecord = new VolleyErrorRecord();
+                                errorRecord.setOrgin(ctx.getString(R.string.salesInvoiceCreation));
+                                errorRecord.setErrorBody(body);
+                                errorRecord.setTimeStamp(ac.createTimeStamp("yyyy:MM:dd-HH:mm:ss:SSS"));
+                                stDatabase.stDao().addErrorRecord(errorRecord);
+
+                                listener.onInvoicePosted(Utils.FAILURE, requestCode,
                                         Utils.VOLLEY_ERROR_RESPONSE_BODY, orderId, noOfInvoices,
                                         noOfProcessedInvoices, null, body);
 

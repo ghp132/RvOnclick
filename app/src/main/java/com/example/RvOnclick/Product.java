@@ -25,11 +25,67 @@ public class Product {
 
     private String productCompany;
     private Boolean productDisabled;
-    private String productGroup;
-    private double productRate;
-    private double stock;
+    private String productGroup, defaultSalesUom, stockUom;
+    private double productRate, defSalesUomConversion;
+    private double stock, cgst, sgst, igst, cess;
     private Double currentOrderQty;
     private double currentOrderFreeQty;
+
+    public String getDefaultSalesUom() {
+        return defaultSalesUom;
+    }
+
+    public void setDefaultSalesUom(String defaultSalesUom) {
+        this.defaultSalesUom = defaultSalesUom;
+    }
+
+    public String getStockUom() {
+        return stockUom;
+    }
+
+    public void setStockUom(String stockUom) {
+        this.stockUom = stockUom;
+    }
+
+    public double getDefSalesUomConversion() {
+        return defSalesUomConversion;
+    }
+
+    public void setDefSalesUomConversion(double defUomSalesConversion) {
+        this.defSalesUomConversion = defSalesUomConversion;
+    }
+
+    public double getCgst() {
+        return cgst;
+    }
+
+    public void setCgst(double cgst) {
+        this.cgst = cgst;
+    }
+
+    public double getSgst() {
+        return sgst;
+    }
+
+    public void setSgst(double sgst) {
+        this.sgst = sgst;
+    }
+
+    public double getIgst() {
+        return igst;
+    }
+
+    public void setIgst(double igst) {
+        this.igst = igst;
+    }
+
+    public double getCess() {
+        return cess;
+    }
+
+    public void setCess(double cess) {
+        this.cess = cess;
+    }
 
     public double getCurrentOrderFreeQty() {
         return currentOrderFreeQty;

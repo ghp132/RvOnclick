@@ -14,7 +14,6 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,11 +22,12 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickListener {
+public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickListener, Rv1Adapter.OnItemLongClickListener {
     List<Payment> paymentList;
     RecyclerView recyclerView;
     Rv1Adapter adapter;
     Rv1Adapter.OnItemClickListener listener;
+    Rv1Adapter.OnItemLongClickListener longClickListener;
     ApplicationController ac = new ApplicationController();
     StDatabase stDatabase;
     List<Rv1Item> rv1ItemList = new ArrayList<>();
@@ -54,7 +54,8 @@ public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickList
 
         recyclerView = view.findViewById(R.id.rv1_recyclerView);
         listener = this;
-        adapter = new Rv1Adapter(listener, rv1ItemList, getActivity());
+        longClickListener = this;
+        adapter = new Rv1Adapter(listener, longClickListener, rv1ItemList, getActivity());
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -153,4 +154,8 @@ public class TabFragment3 extends Fragment implements Rv1Adapter.OnItemClickList
     }
 
 
+    @Override
+    public void onItemLongClicked(View view, int position) {
+
+    }
 }

@@ -84,7 +84,7 @@ public class CustomerTransactionOrderFragment extends Fragment
         View view = inflater.inflate(R.layout.fragment_customer_transaction_order, container, false);
 
         custCode = getArguments().getString("custCode");
-        Log.d("TransactionActivity", "onCreateView: ");
+        //Log.d("TransactionActivity", "onCreateView: ");
         tvOrderInfo = view.findViewById(R.id.tv_customerOrderInfo);
         btBtpPrint = view.findViewById(R.id.bt_btpPrint);
         btPay = view.findViewById(R.id.bt_pay);
@@ -224,6 +224,7 @@ public class CustomerTransactionOrderFragment extends Fragment
             double freeQty = 0;
             long parentId = orderProduct.getParentId();
             long childId = orderProduct.getChildId();
+            String warehouse = orderProduct.getWarehouse();
             if (childId != 0) {
                 for (OrderProduct prod : productList) {
                     if (prod.getOrderProductId() == orderProduct.getChildId()) {
@@ -251,6 +252,7 @@ public class CustomerTransactionOrderFragment extends Fragment
             args.putDouble("qty", qty);
             args.putDouble("freeQty", freeQty);
             args.putDouble("rate", rate);
+            args.putString("warehouse", warehouse);
 
 
             DialogFragment_ProductRateInfo df = new DialogFragment_ProductRateInfo();
@@ -742,10 +744,11 @@ public class CustomerTransactionOrderFragment extends Fragment
     }
 
     private void showPaymentFragment() {
+        //leads to the new main activity Main2Activity
         Intent m2aIntent = new Intent(getActivity(), Main2Activity.class);
         m2aIntent.putExtra("custCode", custCode);
         m2aIntent.putExtra("fragment", com.example.RvOnclick.Utils.CUSTOMER_OUTSTANDING_LIST_FRAGMENT);
-        getActivity().startActivity(m2aIntent);
+        startActivity(m2aIntent);
     }
 
 
@@ -796,7 +799,7 @@ public class CustomerTransactionOrderFragment extends Fragment
                     outputStream.write(printformat);
 
 
-                    printCustom(companyName, 2, 1);
+                    printCustom(companyName, 1, 1);
                     printCustom(addressLine1, 1, 1);
                     if (!addressLine2.equals("")) {
                         printCustom(addressLine2 + ", " + city, 0, 1);

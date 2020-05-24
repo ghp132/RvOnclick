@@ -40,4 +40,15 @@
 
     </android.support.v7.widget.RecyclerView>
 
+    <Spinner
+        android:id="@+id/sp_brandList"
+        android:layout_width="181dp"
+        android:layout_height="44dp"
+        android:layout_above="@+id/product_recyclerview"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="1dp"
+        android:layout_toEndOf="@+id/et_productSearch" />
+
 </RelativeLayout>
